@@ -12,7 +12,8 @@ class PairingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAddress = controller.localAddresses.isNotEmpty;
+    final pairingPayload = controller.pairingPayload;
+    final hasAddress = pairingPayload != null;
     return Card(
       child: CustomScrollView(
         slivers: [
@@ -58,32 +59,60 @@ class PairingCard extends StatelessWidget {
                     ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
                   ),
                   const SizedBox(height: AppSizes.spaceLg),
-                  Center(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                        border: Border.all(color: AppColors.surfaceMuted),
+                  if (pairingPayload != null)
+                    Center(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusLg,
+                          ),
+                          border: Border.all(color: AppColors.surfaceMuted),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSizes.spaceMd),
+                          child: QrImageView(
+                            data: pairingPayload,
+                            version: QrVersions.auto,
+                            size: 188,
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: AppColors.primaryDark,
+                            ),
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: AppColors.primaryDark,
+                            ),
+                            semanticsLabel: 'BuzzIt pairing QR code',
+                          ),
+                        ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSizes.spaceMd),
-                        child: QrImageView(
-                          data: controller.pairingPayload,
-                          version: QrVersions.auto,
-                          size: 188,
-                          eyeStyle: const QrEyeStyle(
-                            eyeShape: QrEyeShape.square,
-                            color: AppColors.primaryDark,
-                          ),
-                          dataModuleStyle: const QrDataModuleStyle(
-                            dataModuleShape: QrDataModuleShape.square,
-                            color: AppColors.primaryDark,
-                          ),
-                          semanticsLabel: 'BuzzIt pairing QR code',
+                    )
+                  else
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryLight,
+                        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(AppSizes.spaceLg),
+                        child: Column(
+                          children: <Widget>[
+                            Icon(
+                              Icons.wifi_off_rounded,
+                              size: 52,
+                              color: AppColors.warning,
+                            ),
+                            SizedBox(height: AppSizes.spaceSm),
+                            Text(
+                              'QR pairing is unavailable until a private LAN address is detected.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
                   const SizedBox(height: AppSizes.spaceLg),
                   Text(
                     'PAIRING CODE',
@@ -116,7 +145,9 @@ class PairingCard extends StatelessWidget {
                           .map(
                             (address) => DropdownMenuItem<String>(
                               value: address,
-                              child: Text('$address:${controller.settings.port}'),
+                              child: Text(
+                                '$address:${controller.settings.port}',
+                              ),
                             ),
                           )
                           .toList(),

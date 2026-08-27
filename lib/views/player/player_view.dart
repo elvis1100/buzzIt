@@ -78,7 +78,6 @@ class PlayerView extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _SettingsBar extends StatefulWidget {

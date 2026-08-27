@@ -63,14 +63,23 @@ class ProtocolMessage {
     if (type == null) {
       throw const FormatException('Unknown message type.');
     }
+    final messageId = map['id'];
+    if (messageId is! String || messageId.trim().isEmpty) {
+      throw const FormatException('Protocol message ID must be a string.');
+    }
+    final roundId = map['roundId'];
+    if (roundId != null && (roundId is! int || roundId < 1)) {
+      throw const FormatException('Round ID must be a positive integer.');
+    }
     final rawPayload = map['payload'];
+    if (rawPayload is! Map) {
+      throw const FormatException('Protocol payload must be an object.');
+    }
     return ProtocolMessage(
       type: type,
-      payload: rawPayload is Map
-          ? Map<String, Object?>.from(rawPayload)
-          : const <String, Object?>{},
-      roundId: map['roundId'] as int?,
-      messageId: map['id'] as String?,
+      payload: Map<String, Object?>.from(rawPayload),
+      roundId: roundId as int?,
+      messageId: messageId,
     );
   }
 

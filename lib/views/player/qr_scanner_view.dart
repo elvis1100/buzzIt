@@ -31,6 +31,29 @@ class _QrScannerViewState extends State<QrScannerView> {
         children: <Widget>[
           MobileScanner(
             controller: _controller,
+            errorBuilder: (context, error) {
+              final permissionDenied =
+                  error.errorCode == MobileScannerErrorCode.permissionDenied;
+              return ColoredBox(
+                color: Colors.black,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSizes.spaceXl),
+                    child: Text(
+                      permissionDenied
+                          ? 'Camera access is required to scan the host QR code. You can return and enter the connection details manually.'
+                          : 'The camera could not be started. Return and enter the connection details manually.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
             onDetect: (capture) {
               if (_handled) {
                 return;

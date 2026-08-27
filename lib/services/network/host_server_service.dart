@@ -94,6 +94,7 @@ class HostServerService {
 
   void _listenToClient(WebSocket socket) {
     var authenticated = false;
+    var terminated = false;
     socket.pingInterval = const Duration(seconds: 12);
     final handshakeTimer = Timer(const Duration(seconds: 8), () async {
       if (!authenticated) {
@@ -111,14 +112,15 @@ class HostServerService {
           if (!authenticated) {
             final code = message.payload['code'];
             if (message.type != MessageType.hello || code != _pairingCode) {
-              socket.add(
+              _sendToSocket(
+                socket,
                 ProtocolMessage(
                   type: MessageType.error,
                   payload: const <String, Object?>{
                     'code': 'pairing_failed',
                     'message': 'The pairing code is incorrect.',
                   },
-                ).encode(),
+                ),
               );
               unawaited(socket.close(4003, 'Pairing failed.'));
               return;
@@ -127,16 +129,15 @@ class HostServerService {
             handshakeTimer.cancel();
             _pendingClient = null;
             _client = socket;
-            _events.add(
-              const HostNetworkEvent(HostNetworkEventType.clientConnected),
-            );
+            _emit(const HostNetworkEvent(HostNetworkEventType.clientConnected));
             return;
           }
-          _events.add(
+          _emit(
             HostNetworkEvent(HostNetworkEventType.message, message: message),
           );
         } on FormatException catch (error) {
-          send(
+          _sendToSocket(
+            socket,
             ProtocolMessage(
               type: MessageType.error,
               payload: <String, Object?>{
@@ -148,20 +149,22 @@ class HostServerService {
         }
       },
       onDone: () {
-        handshakeTimer.cancel();
-        final wasAuthenticated = identical(_client, socket);
-        if (identical(_pendingClient, socket)) {
-          _pendingClient = null;
-        }
-        if (wasAuthenticated) {
-          _client = null;
-          _events.add(
-            const HostNetworkEvent(HostNetworkEventType.clientDisconnected),
-          );
-        }
+        _finishClient(
+          socket,
+          handshakeTimer: handshakeTimer,
+          alreadyTerminated: terminated,
+          markTerminated: () => terminated = true,
+        );
       },
       onError: (Object error, StackTrace stackTrace) {
-        _emitError('Client connection error: $error');
+        _finishClient(
+          socket,
+          handshakeTimer: handshakeTimer,
+          alreadyTerminated: terminated,
+          markTerminated: () => terminated = true,
+          error: error,
+        );
+        unawaited(socket.close(1011, 'Connection error.'));
       },
       cancelOnError: true,
     );
@@ -169,8 +172,8 @@ class HostServerService {
 
   void send(ProtocolMessage message) {
     final client = _client;
-    if (client != null && client.readyState == WebSocket.open) {
-      client.add(message.encode());
+    if (client != null) {
+      _sendToSocket(client, message);
     }
   }
 
@@ -179,6 +182,7 @@ class HostServerService {
     _client = null;
     if (client != null) {
       await client.close(1000, 'Disconnected by host.');
+      _emit(const HostNetworkEvent(HostNetworkEventType.clientDisconnected));
     }
   }
 
@@ -195,8 +199,43 @@ class HostServerService {
   }
 
   void _emitError(String detail) {
+    _emit(HostNetworkEvent(HostNetworkEventType.error, detail: detail));
+  }
+
+  void _finishClient(
+    WebSocket socket, {
+    required Timer handshakeTimer,
+    required bool alreadyTerminated,
+    required void Function() markTerminated,
+    Object? error,
+  }) {
+    if (alreadyTerminated) {
+      return;
+    }
+    markTerminated();
+    handshakeTimer.cancel();
+    final wasAuthenticated = identical(_client, socket);
+    if (identical(_pendingClient, socket)) {
+      _pendingClient = null;
+    }
+    if (wasAuthenticated) {
+      _client = null;
+      _emit(const HostNetworkEvent(HostNetworkEventType.clientDisconnected));
+    }
+    if (error != null) {
+      _emitError('Client connection error: $error');
+    }
+  }
+
+  void _sendToSocket(WebSocket socket, ProtocolMessage message) {
+    if (socket.readyState == WebSocket.open) {
+      socket.add(message.encode());
+    }
+  }
+
+  void _emit(HostNetworkEvent event) {
     if (!_events.isClosed) {
-      _events.add(HostNetworkEvent(HostNetworkEventType.error, detail: detail));
+      _events.add(event);
     }
   }
 

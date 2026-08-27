@@ -21,6 +21,7 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
   late bool _hapticsEnabled;
   late bool _soundEnabled;
   bool _saving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -145,6 +146,16 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
                         setState(() => _soundEnabled = value);
                       },
                     ),
+                    if (_errorMessage != null) ...<Widget>[
+                      const SizedBox(height: AppSizes.spaceSm),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSizes.spaceMd),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
@@ -189,24 +200,44 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
-    await widget.controller.updateTeams(
-      teamAName: _teamAController.text,
-      teamBName: _teamBController.text,
-      teamAColor: _teamAColor.toARGB32(),
-      teamBColor: _teamBColor.toARGB32(),
-    );
-    await widget.controller.setHapticsEnabled(_hapticsEnabled);
-    await widget.controller.setSoundEnabled(_soundEnabled);
-    if (mounted) {
-      Navigator.pop(context);
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.controller.updateTeams(
+        teamAName: _teamAController.text,
+        teamBName: _teamBController.text,
+        teamAColor: _teamAColor.toARGB32(),
+        teamBColor: _teamBColor.toARGB32(),
+      );
+      await widget.controller.setHapticsEnabled(_hapticsEnabled);
+      await widget.controller.setSoundEnabled(_soundEnabled);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _errorMessage = 'Could not save buzzer settings: $error';
+        });
+      }
     }
   }
 
   Future<void> _disconnect() async {
-    await widget.controller.disconnect();
-    if (mounted) {
-      Navigator.pop(context);
+    try {
+      await widget.controller.disconnect();
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Could not disconnect cleanly: $error';
+        });
+      }
     }
   }
 }

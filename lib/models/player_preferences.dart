@@ -19,7 +19,7 @@ class PlayerPreferences {
     return host.trim().isNotEmpty &&
         port >= AppConstants.minimumPort &&
         port <= AppConstants.maximumPort &&
-        pairingCode.length == AppConstants.pairingCodeLength;
+        RegExp(r'^\d{6}$').hasMatch(pairingCode);
   }
 
   PlayerPreferences copyWith({
@@ -49,12 +49,22 @@ class PlayerPreferences {
   }
 
   factory PlayerPreferences.fromJson(Map<String, Object?> json) {
+    final host = json['host'];
+    final port = json['port'];
+    final pairingCode = json['pairingCode'];
+    final hapticsEnabled = json['hapticsEnabled'];
+    final soundEnabled = json['soundEnabled'];
     return PlayerPreferences(
-      host: json['host'] as String? ?? '',
-      port: json['port'] as int? ?? AppConstants.defaultPort,
-      pairingCode: json['pairingCode'] as String? ?? '',
-      hapticsEnabled: json['hapticsEnabled'] as bool? ?? true,
-      soundEnabled: json['soundEnabled'] as bool? ?? true,
+      host: host is String ? host.trim() : '',
+      port:
+          port is int &&
+              port >= AppConstants.minimumPort &&
+              port <= AppConstants.maximumPort
+          ? port
+          : AppConstants.defaultPort,
+      pairingCode: pairingCode is String ? pairingCode : '',
+      hapticsEnabled: hapticsEnabled is bool ? hapticsEnabled : true,
+      soundEnabled: soundEnabled is bool ? soundEnabled : true,
     );
   }
 }

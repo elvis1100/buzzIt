@@ -19,42 +19,48 @@ class NetworkAddressService {
         continue;
       }
       for (final address in interface.addresses) {
-        if (_isPrivate(address.address)) {
+        addresses.add(address.address);
+      }
+    }
+    // Preserve a usable manual option on systems with only virtual adapters.
+    if (addresses.isEmpty) {
+      for (final interface in interfaces) {
+        for (final address in interface.addresses) {
           addresses.add(address.address);
         }
       }
     }
-    // Fallback: if we filtered out everything, just add them all back
-    if (addresses.isEmpty) {
-      for (final interface in interfaces) {
-        for (final address in interface.addresses) {
-          if (_isPrivate(address.address)) {
-            addresses.add(address.address);
-          }
+    final sorted = addresses.toList()
+      ..sort((a, b) {
+        final scoreA = _addressScore(a);
+        final scoreB = _addressScore(b);
+        if (scoreA != scoreB) {
+          return scoreB.compareTo(scoreA);
         }
-      }
-    }
-    final sorted = addresses.toList()..sort((a, b) {
-      // Prioritize 192.168.* (score 2) and 10.* (score 1) over 172.* (score 0)
-      final scoreA = a.startsWith('192.168.') ? 2 : a.startsWith('10.') ? 1 : 0;
-      final scoreB = b.startsWith('192.168.') ? 2 : b.startsWith('10.') ? 1 : 0;
-      if (scoreA != scoreB) {
-        return scoreB.compareTo(scoreA);
-      }
-      return a.compareTo(b);
-    });
+        return a.compareTo(b);
+      });
     return sorted;
   }
 
-  bool _isPrivate(String address) {
+  int _addressScore(String address) {
     final octets = address.split('.').map(int.tryParse).toList();
     if (octets.length != 4 || octets.any((value) => value == null)) {
-      return false;
+      return 0;
     }
     final first = octets[0]!;
     final second = octets[1]!;
-    return first == 10 ||
-        (first == 172 && second >= 16 && second <= 31) ||
-        (first == 192 && second == 168);
+    if (first == 192 && second == 168) {
+      return 4;
+    }
+    if (first == 10) {
+      return 3;
+    }
+    if (first == 172 && second >= 16 && second <= 31) {
+      return 2;
+    }
+    if (first == 100 && second >= 64 && second <= 127) {
+      return 1;
+    }
+    return 0;
   }
 }

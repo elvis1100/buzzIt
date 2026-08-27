@@ -64,12 +64,15 @@ class GameState {
     final phase = json['phase'] == RoundPhase.locked.name && winner != null
         ? RoundPhase.locked
         : RoundPhase.ready;
+    final rawRoundId = json['roundId'];
     return GameState(
-      roundId: json['roundId'] as int? ?? 1,
+      roundId: rawRoundId is int && rawRoundId > 0 ? rawRoundId : 1,
       phase: phase,
       winner: phase == RoundPhase.locked ? winner : null,
-      acceptedAt: _parseDate(json['acceptedAt']),
-      resetAt: _parseDate(json['resetAt']),
+      acceptedAt: phase == RoundPhase.locked
+          ? _parseDate(json['acceptedAt'])
+          : null,
+      resetAt: phase == RoundPhase.locked ? _parseDate(json['resetAt']) : null,
     );
   }
 

@@ -55,6 +55,9 @@ class HostSettings {
     final matchMap = rawMatch is Map
         ? Map<String, Object?>.from(rawMatch)
         : <String, Object?>{};
+    final teamASoundPath = json['teamASoundPath'];
+    final teamBSoundPath = json['teamBSoundPath'];
+    final soundEnabled = json['soundEnabled'];
     return HostSettings(
       match: MatchConfiguration.fromJson(matchMap),
       port: json['port'] is int
@@ -63,9 +66,9 @@ class HostSettings {
               AppConstants.maximumPort,
             )
           : AppConstants.defaultPort,
-      teamASoundPath: json['teamASoundPath'] as String?,
-      teamBSoundPath: json['teamBSoundPath'] as String?,
-      soundEnabled: json['soundEnabled'] as bool? ?? true,
+      teamASoundPath: teamASoundPath is String ? teamASoundPath : null,
+      teamBSoundPath: teamBSoundPath is String ? teamBSoundPath : null,
+      soundEnabled: soundEnabled is bool ? soundEnabled : true,
     );
   }
 }

@@ -55,7 +55,7 @@ class StorageService {
       if (decoded is Map) {
         return decoder(Map<String, Object?>.from(decoded));
       }
-    } on FormatException {
+    } on Object {
       return null;
     }
     return null;

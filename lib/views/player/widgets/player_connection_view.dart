@@ -87,135 +87,135 @@ class _PlayerConnectionViewState extends State<PlayerConnectionView> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSizes.spaceLg),
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            Text(
-                              'Connect to host',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.w800),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Text(
+                            'Connect to host',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: AppSizes.spaceXs),
+                          const Text(
+                            'Scanning the host QR code is the fastest option.',
+                            style: TextStyle(color: AppColors.inkMuted),
+                          ),
+                          const SizedBox(height: AppSizes.spaceLg),
+                          FilledButton.icon(
+                            onPressed: connecting ? null : _scanQr,
+                            icon: const Icon(Icons.qr_code_scanner_rounded),
+                            label: const Text('Scan host QR code'),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.spaceMd,
                             ),
-                            const SizedBox(height: AppSizes.spaceXs),
-                            const Text(
-                              'Scanning the host QR code is the fastest option.',
-                              style: TextStyle(color: AppColors.inkMuted),
-                            ),
-                            const SizedBox(height: AppSizes.spaceLg),
-                            FilledButton.icon(
-                              onPressed: connecting ? null : _scanQr,
-                              icon: const Icon(Icons.qr_code_scanner_rounded),
-                              label: const Text('Scan host QR code'),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSizes.spaceMd,
-                              ),
-                              child: Row(
-                                children: <Widget>[
-                                  Expanded(child: Divider()),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: AppSizes.spaceMd,
-                                    ),
-                                    child: Text(
-                                      'OR ENTER MANUALLY',
-                                      style: TextStyle(
-                                        color: AppColors.inkMuted,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1,
-                                      ),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(child: Divider()),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSizes.spaceMd,
+                                  ),
+                                  child: Text(
+                                    'OR ENTER MANUALLY',
+                                    style: TextStyle(
+                                      color: AppColors.inkMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1,
                                     ),
                                   ),
-                                  Expanded(child: Divider()),
-                                ],
-                              ),
-                            ),
-                            TextField(
-                              controller: _hostController,
-                              enabled: !connecting,
-                              decoration: const InputDecoration(
-                                labelText: 'Host IP address',
-                                hintText: '192.168.1.25',
-                                prefixIcon: Icon(Icons.router_outlined),
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.spaceSm),
-                            TextField(
-                              controller: _portController,
-                              enabled: !connecting,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: const InputDecoration(
-                                labelText: 'Port',
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.spaceSm),
-                            TextField(
-                              controller: _codeController,
-                              enabled: !connecting,
-                              keyboardType: TextInputType.number,
-                              maxLength: AppConstants.pairingCodeLength,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(
-                                  AppConstants.pairingCodeLength,
                                 ),
+                                Expanded(child: Divider()),
                               ],
-                              decoration: const InputDecoration(
-                                labelText: 'Six-digit pairing code',
-                                counterText: '',
-                                prefixIcon: Icon(Icons.pin_outlined),
+                            ),
+                          ),
+                          TextField(
+                            controller: _hostController,
+                            enabled: !connecting,
+                            decoration: const InputDecoration(
+                              labelText: 'Host IP address',
+                              hintText: '192.168.1.25',
+                              prefixIcon: Icon(Icons.router_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.spaceSm),
+                          TextField(
+                            controller: _portController,
+                            enabled: !connecting,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Port',
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.spaceSm),
+                          TextField(
+                            controller: _codeController,
+                            enabled: !connecting,
+                            keyboardType: TextInputType.number,
+                            maxLength: AppConstants.pairingCodeLength,
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(
+                                AppConstants.pairingCodeLength,
+                              ),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Six-digit pairing code',
+                              counterText: '',
+                              prefixIcon: Icon(Icons.pin_outlined),
+                            ),
+                          ),
+                          if (_validationMessage != null) ...<Widget>[
+                            const SizedBox(height: AppSizes.spaceSm),
+                            Text(
+                              _validationMessage!,
+                              style: const TextStyle(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (_validationMessage != null) ...<Widget>[
-                              const SizedBox(height: AppSizes.spaceSm),
-                              Text(
-                                _validationMessage!,
-                                style: const TextStyle(
-                                  color: AppColors.error,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                            if (widget.controller.errorMessage !=
-                                null) ...<Widget>[
-                              const SizedBox(height: AppSizes.spaceMd),
-                              ErrorBanner(
-                                message: widget.controller.errorMessage!,
-                                onDismiss: widget.controller.clearError,
-                              ),
-                            ],
-                            const SizedBox(height: AppSizes.spaceLg),
-                            FilledButton.icon(
-                              onPressed: connecting ? null : _connect,
-                              icon: connecting
-                                  ? const SizedBox.square(
-                                      dimension: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.link_rounded),
-                              label: Text(
-                                connecting
-                                    ? _statusLabel(widget.controller.status)
-                                    : 'Connect',
-                              ),
-                            ),
-                            if (connecting) ...<Widget>[
-                              const SizedBox(height: AppSizes.spaceSm),
-                              TextButton(
-                                onPressed: widget.controller.disconnect,
-                                child: const Text('Cancel'),
-                              ),
-                            ],
                           ],
-                        ),
+                          if (widget.controller.errorMessage !=
+                              null) ...<Widget>[
+                            const SizedBox(height: AppSizes.spaceMd),
+                            ErrorBanner(
+                              message: widget.controller.errorMessage!,
+                              onDismiss: widget.controller.clearError,
+                            ),
+                          ],
+                          const SizedBox(height: AppSizes.spaceLg),
+                          FilledButton.icon(
+                            onPressed: connecting ? null : _connect,
+                            icon: connecting
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.link_rounded),
+                            label: Text(
+                              connecting
+                                  ? _statusLabel(widget.controller.status)
+                                  : 'Connect',
+                            ),
+                          ),
+                          if (connecting) ...<Widget>[
+                            const SizedBox(height: AppSizes.spaceSm),
+                            TextButton(
+                              onPressed: widget.controller.disconnect,
+                              child: const Text('Cancel'),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ],
+                  ),
+                ],
               ),
             ),
           ),

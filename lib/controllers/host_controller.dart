@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/constants.dart';
 import '../models/connection_status.dart';
 import '../models/game_state.dart';
 import '../models/host_settings.dart';
 import '../models/match_configuration.dart';
 import '../models/protocol_message.dart';
+import '../models/sound_selection.dart';
 import '../models/team.dart';
 import '../services/audio/audio_service.dart';
 import '../services/network/host_server_service.dart';
@@ -58,9 +60,12 @@ class HostController extends ChangeNotifier {
   bool get initialized => _initialized;
   String? get errorMessage => _errorMessage;
 
-  String get pairingPayload {
+  String? get pairingPayload {
+    if (selectedAddress.isEmpty) {
+      return null;
+    }
     return PairingPayload(
-      host: selectedAddress.isEmpty ? '127.0.0.1' : selectedAddress,
+      host: selectedAddress,
       port: settings.port,
       code: pairingCode,
     ).encode();
@@ -86,18 +91,22 @@ class HostController extends ChangeNotifier {
     }
     _networkSubscription = _server.events.listen(_handleNetworkEvent);
     _pairingCode = _pairing.generateCode();
+    final startupWarnings = <String>[];
     try {
-      final results = await Future.wait<Object>(<Future<Object>>[
-        _storage.loadHostSettings(),
-        _networkAddresses.findLocalIpv4Addresses(),
-      ]);
-      _settings = results[0] as HostSettings;
-      _localAddresses = results[1] as List<String>;
-      _selectedAddress = _localAddresses.firstOrNull ?? '';
-      await _startServer();
+      _settings = await _storage.loadHostSettings();
     } on Object catch (error) {
-      _serverStatus = HostServerStatus.failed;
-      _errorMessage = 'Host startup failed: $error';
+      startupWarnings.add('Could not load saved host settings: $error');
+    }
+    try {
+      _localAddresses = await _networkAddresses.findLocalIpv4Addresses();
+      _selectedAddress = _localAddresses.firstOrNull ?? '';
+    } on Object catch (error) {
+      startupWarnings.add('Could not detect local network addresses: $error');
+    }
+    await _startServer();
+    if (_serverStatus == HostServerStatus.listening &&
+        startupWarnings.isNotEmpty) {
+      _errorMessage = startupWarnings.join('\n');
     }
     _initialized = true;
     _notify();
@@ -186,14 +195,7 @@ class HostController extends ChangeNotifier {
     }
     _gameState = next;
     if (settings.soundEnabled) {
-      unawaited(
-        _audio.play(
-          team,
-          customPath: team == Team.a
-              ? settings.teamASoundPath
-              : settings.teamBSoundPath,
-        ),
-      );
+      unawaited(_playWinnerSound(team));
     }
     _scheduleReset();
     _sendState();
@@ -271,36 +273,53 @@ class HostController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> setSoundEnabled(bool enabled) async {
-    _settings = settings.copyWith(soundEnabled: enabled);
-    await _storage.saveHostSettings(settings);
-    _notify();
+  Future<SoundSelection?> chooseSound() {
+    return _audio.chooseSound();
   }
 
-  Future<void> updatePort(int port) async {
-    if (port == settings.port) {
-      return;
+  Future<void> previewSound(Team team, SoundSelection selection) {
+    return _audio.previewSelection(team, selection);
+  }
+
+  Future<void> saveSettings({
+    required MatchConfiguration match,
+    required bool soundEnabled,
+    required int port,
+    SoundSelection? teamASound,
+    SoundSelection? teamBSound,
+  }) async {
+    var teamASoundPath = settings.teamASoundPath;
+    var teamBSoundPath = settings.teamBSoundPath;
+    if (teamASound != null) {
+      teamASoundPath = await _audio.persistSound(Team.a, teamASound);
     }
-    _settings = settings.copyWith(port: port);
+    if (teamBSound != null) {
+      teamBSoundPath = await _audio.persistSound(Team.b, teamBSound);
+    }
+
+    final portChanged = port != settings.port;
+    _settings = HostSettings(
+      match: match,
+      port: port.clamp(AppConstants.minimumPort, AppConstants.maximumPort),
+      teamASoundPath: teamASoundPath,
+      teamBSoundPath: teamBSoundPath,
+      soundEnabled: soundEnabled,
+    );
     await _storage.saveHostSettings(settings);
-    _clientConnected = false;
-    await _startServer();
+    _sendState();
+    if (portChanged) {
+      _clientConnected = false;
+      await _startServer();
+    } else {
+      _notify();
+    }
   }
 
-  Future<void> selectSound(Team team) async {
+  Future<void> _playWinnerSound(Team team) async {
     try {
-      final imported = await _audio.importSound(team);
-      if (imported == null) {
-        return;
-      }
-      _settings = team == Team.a
-          ? settings.copyWith(teamASoundPath: imported)
-          : settings.copyWith(teamBSoundPath: imported);
-      await _storage.saveHostSettings(settings);
       await testSound(team);
-      _notify();
     } on Object catch (error) {
-      _errorMessage = 'Could not import the sound: $error';
+      _errorMessage = 'Could not play the buzzer sound: $error';
       _notify();
     }
   }

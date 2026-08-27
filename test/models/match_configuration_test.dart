@@ -14,4 +14,24 @@ void main() {
     expect(configuration.teamBName.length, AppConstants.maximumTeamNameLength);
     expect(configuration.autoResetSeconds, AppConstants.maximumResetSeconds);
   });
+
+  test('uses safe defaults for malformed persisted values', () {
+    final configuration = MatchConfiguration.fromJson(<String, Object?>{
+      'teamAName': 12,
+      'teamBColor': -1,
+      'autoResetEnabled': 'yes',
+      'autoResetSeconds': 'five',
+    });
+
+    expect(configuration.teamAName, MatchConfiguration.defaults.teamAName);
+    expect(configuration.teamBColor, MatchConfiguration.defaults.teamBColor);
+    expect(
+      configuration.autoResetEnabled,
+      MatchConfiguration.defaults.autoResetEnabled,
+    );
+    expect(
+      configuration.autoResetSeconds,
+      MatchConfiguration.defaults.autoResetSeconds,
+    );
+  });
 }

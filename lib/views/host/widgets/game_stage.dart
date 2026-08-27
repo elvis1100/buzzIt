@@ -51,7 +51,6 @@ class GameStage extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-
                 const Spacer(),
                 Text(
                   controller.match.autoResetEnabled

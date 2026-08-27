@@ -26,4 +26,25 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('rejects malformed IDs, round IDs, and payloads', () {
+    expect(
+      () => ProtocolMessage.decode(
+        '{"version":1,"id":null,"type":"ping","payload":{}}',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => ProtocolMessage.decode(
+        '{"version":1,"id":"x","type":"ping","roundId":"1","payload":{}}',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => ProtocolMessage.decode(
+        '{"version":1,"id":"x","type":"ping","payload":[]}',
+      ),
+      throwsFormatException,
+    );
+  });
 }

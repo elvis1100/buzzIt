@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import '../../controllers/host_controller.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../models/sound_selection.dart';
 import '../../models/team.dart';
 import '../../widgets/team_editor_card.dart';
 
@@ -25,6 +26,8 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
   late bool _autoResetEnabled;
   late int _autoResetSeconds;
   late bool _soundEnabled;
+  SoundSelection? _teamASound;
+  SoundSelection? _teamBSound;
   bool _saving = false;
   String? _validationMessage;
 
@@ -177,18 +180,22 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       teamLabel: _teamAController.text.trim().isEmpty
                           ? 'Team A'
                           : _teamAController.text.trim(),
-                      filePath: widget.controller.settings.teamASoundPath,
+                      filePath:
+                          _teamASound?.fileName ??
+                          widget.controller.settings.teamASoundPath,
                       onChoose: () => _chooseSound(Team.a),
-                      onTest: () => widget.controller.testSound(Team.a),
+                      onTest: () => _testSound(Team.a),
                     ),
                     const SizedBox(height: AppSizes.spaceSm),
                     _SoundRow(
                       teamLabel: _teamBController.text.trim().isEmpty
                           ? 'Team B'
                           : _teamBController.text.trim(),
-                      filePath: widget.controller.settings.teamBSoundPath,
+                      filePath:
+                          _teamBSound?.fileName ??
+                          widget.controller.settings.teamBSoundPath,
                       onChoose: () => _chooseSound(Team.b),
-                      onTest: () => widget.controller.testSound(Team.b),
+                      onTest: () => _testSound(Team.b),
                     ),
                     const SizedBox(height: AppSizes.spaceXl),
                     const _SectionTitle(
@@ -250,9 +257,49 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
   }
 
   Future<void> _chooseSound(Team team) async {
-    await widget.controller.selectSound(team);
-    if (mounted) {
-      setState(() {});
+    try {
+      final selection = await widget.controller.chooseSound();
+      if (selection == null) {
+        return;
+      }
+      await widget.controller.previewSound(team, selection);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (team == Team.a) {
+          _teamASound = selection;
+        } else {
+          _teamBSound = selection;
+        }
+        _validationMessage = null;
+      });
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _validationMessage = 'Could not use that sound: $error';
+        });
+      }
+    }
+  }
+
+  Future<void> _testSound(Team team) async {
+    try {
+      final selection = team == Team.a ? _teamASound : _teamBSound;
+      if (selection == null) {
+        await widget.controller.testSound(team);
+      } else {
+        await widget.controller.previewSound(team, selection);
+      }
+      if (mounted) {
+        setState(() => _validationMessage = null);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _validationMessage = 'Could not play that sound: $error';
+        });
+      }
     }
   }
 
@@ -278,11 +325,24 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
       autoResetEnabled: _autoResetEnabled,
       autoResetSeconds: _autoResetSeconds,
     );
-    await widget.controller.updateMatch(match);
-    await widget.controller.setSoundEnabled(_soundEnabled);
-    await widget.controller.updatePort(port);
-    if (mounted) {
-      Navigator.pop(context);
+    try {
+      await widget.controller.saveSettings(
+        match: match,
+        soundEnabled: _soundEnabled,
+        port: port,
+        teamASound: _teamASound,
+        teamBSound: _teamBSound,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _validationMessage = 'Could not save settings: $error';
+        });
+      }
     }
   }
 }

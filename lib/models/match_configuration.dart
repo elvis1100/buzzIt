@@ -63,14 +63,23 @@ class MatchConfiguration {
 
   factory MatchConfiguration.fromJson(Map<String, Object?> json) {
     final resetSeconds = json['autoResetSeconds'];
+    final teamAName = json['teamAName'];
+    final teamBName = json['teamBName'];
+    final teamAColor = json['teamAColor'];
+    final teamBColor = json['teamBColor'];
+    final autoResetEnabled = json['autoResetEnabled'];
     return defaults.copyWith(
-      teamAName: json['teamAName'] as String?,
-      teamBName: json['teamBName'] as String?,
-      teamAColor: json['teamAColor'] as int?,
-      teamBColor: json['teamBColor'] as int?,
-      autoResetEnabled: json['autoResetEnabled'] as bool?,
+      teamAName: teamAName is String ? teamAName : null,
+      teamBName: teamBName is String ? teamBName : null,
+      teamAColor: _validColor(teamAColor),
+      teamBColor: _validColor(teamBColor),
+      autoResetEnabled: autoResetEnabled is bool ? autoResetEnabled : null,
       autoResetSeconds: resetSeconds is int ? resetSeconds : null,
     );
+  }
+
+  static int? _validColor(Object? value) {
+    return value is int && value >= 0 && value <= 0xFFFFFFFF ? value : null;
   }
 
   static String _cleanName(String value, String fallback) {

@@ -1,7 +1,7 @@
 # BuzzIt
 
 BuzzIt is a local-network game buzzer with a Windows/Linux host and one shared
-Android buzzer. The Android screen is split into two landscape team buttons.
+Android buzzer. The portrait screen is split into two tabletop team buttons.
 The first tap is locked immediately, confirmed by the host, announced with a
 team sound, and synchronized back to the phone.
 
@@ -63,9 +63,9 @@ that the host TCP port is allowed through the desktop firewall. On Windows,
 allow the application on **Private networks** rather than disabling the
 firewall.
 
-## 📦 Generating Executables & APKs
+## 📦 Generating Local Executables & APKs
 
-To build the final production files that you can share with others, use the following commands. 
+To build files for local installation and sharing, use the following commands.
 
 ### Android
 

@@ -19,9 +19,9 @@ class PlayerController extends ChangeNotifier {
     StorageService? storage,
     PlayerClientService? client,
     AudioService? audio,
-  })  : _storage = storage ?? StorageService(),
-        _client = client ?? PlayerClientService(),
-        _audio = audio ?? AudioService();
+  }) : _storage = storage ?? StorageService(),
+       _client = client ?? PlayerClientService(),
+       _audio = audio ?? AudioService();
 
   final StorageService _storage;
   final PlayerClientService _client;
@@ -58,7 +58,11 @@ class PlayerController extends ChangeNotifier {
       return;
     }
     _networkSubscription = _client.events.listen(_handleNetworkEvent);
-    _preferences = await _storage.loadPlayerPreferences();
+    try {
+      _preferences = await _storage.loadPlayerPreferences();
+    } on Object catch (error) {
+      _errorMessage = 'Could not load saved buzzer settings: $error';
+    }
     _initialized = true;
     _notify();
     if (preferences.hasConnectionDetails) {
@@ -80,11 +84,15 @@ class PlayerController extends ChangeNotifier {
     _reconnectTimer?.cancel();
     _manualDisconnect = false;
     _preferences = value;
-    await _storage.savePlayerPreferences(preferences);
+    _errorMessage = null;
+    try {
+      await _storage.savePlayerPreferences(preferences);
+    } on Object catch (error) {
+      _errorMessage = 'Could not save connection details: $error';
+    }
     _status = _retryAttempt == 0
         ? PlayerConnectionStatus.connecting
         : PlayerConnectionStatus.reconnecting;
-    _errorMessage = null;
     _notify();
     try {
       await _client.connect(
@@ -142,9 +150,10 @@ class PlayerController extends ChangeNotifier {
       case MessageType.stateSync:
         _applyStatePayload(message.payload);
       case MessageType.error:
-        _errorMessage =
-            message.payload['message'] as String? ??
-            'The host rejected the request.';
+        final detail = message.payload['message'];
+        _errorMessage = detail is String
+            ? detail
+            : 'The host rejected the request.';
         final code = message.payload['code'];
         if (code == 'pairing_failed' || code == 'client_limit') {
           _manualDisconnect = true;
@@ -171,7 +180,7 @@ class PlayerController extends ChangeNotifier {
 
       if (oldWinner == null && newWinner != null) {
         if (preferences.soundEnabled) {
-          unawaited(_audio.play(newWinner));
+          unawaited(_playWinnerSound(newWinner));
         }
       }
 
@@ -188,9 +197,6 @@ class PlayerController extends ChangeNotifier {
     }
     _optimisticWinner = team;
     _notify();
-    if (preferences.hapticsEnabled) {
-      await HapticFeedback.heavyImpact();
-    }
     _client.send(
       ProtocolMessage(
         type: MessageType.buzzAttempt,
@@ -198,6 +204,14 @@ class PlayerController extends ChangeNotifier {
         payload: <String, Object?>{'team': team.wireValue},
       ),
     );
+    if (preferences.hapticsEnabled) {
+      try {
+        await HapticFeedback.heavyImpact();
+      } on Object catch (error) {
+        _errorMessage = 'Could not trigger haptic feedback: $error';
+        _notify();
+      }
+    }
   }
 
   Future<void> updateTeams({
@@ -268,6 +282,15 @@ class PlayerController extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     _notify();
+  }
+
+  Future<void> _playWinnerSound(Team team) async {
+    try {
+      await _audio.play(team);
+    } on Object catch (error) {
+      _errorMessage = 'Could not play the buzzer sound: $error';
+      _notify();
+    }
   }
 
   void _notify() {

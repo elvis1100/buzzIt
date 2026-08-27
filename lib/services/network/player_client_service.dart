@@ -20,6 +20,8 @@ class PlayerClientService {
 
   WebSocket? _socket;
   bool _manualDisconnect = false;
+  bool _disposed = false;
+  int _connectionGeneration = 0;
 
   Stream<PlayerNetworkEvent> get events => _events.stream;
 
@@ -30,8 +32,14 @@ class PlayerClientService {
     required int port,
     required String pairingCode,
   }) async {
-    await disconnect(manual: false);
+    final generation = ++_connectionGeneration;
     _manualDisconnect = false;
+    final previousSocket = _socket;
+    _socket = null;
+    await previousSocket?.close(1000, 'Player reconnecting.');
+    if (!_isCurrent(generation)) {
+      return;
+    }
     final uri = Uri(
       scheme: 'ws',
       host: host.trim(),
@@ -42,11 +50,13 @@ class PlayerClientService {
       final socket = await WebSocket.connect(
         uri.toString(),
       ).timeout(const Duration(seconds: 8));
+      if (!_isCurrent(generation)) {
+        await socket.close(1000, 'Connection attempt canceled.');
+        return;
+      }
       _socket = socket;
       socket.pingInterval = const Duration(seconds: 12);
-      _events.add(
-        const PlayerNetworkEvent(PlayerNetworkEventType.socketOpened),
-      );
+      _emit(const PlayerNetworkEvent(PlayerNetworkEventType.socketOpened));
       send(
         ProtocolMessage(
           type: MessageType.hello,
@@ -62,14 +72,14 @@ class PlayerClientService {
             return;
           }
           try {
-            _events.add(
+            _emit(
               PlayerNetworkEvent(
                 PlayerNetworkEventType.message,
                 message: ProtocolMessage.decode(raw),
               ),
             );
           } on FormatException catch (error) {
-            _events.add(
+            _emit(
               PlayerNetworkEvent(
                 PlayerNetworkEventType.error,
                 detail: error.message,
@@ -80,7 +90,7 @@ class PlayerClientService {
         onDone: () {
           if (identical(_socket, socket)) {
             _socket = null;
-            _events.add(
+            _emit(
               PlayerNetworkEvent(
                 PlayerNetworkEventType.disconnected,
                 detail: _manualDisconnect
@@ -91,21 +101,30 @@ class PlayerClientService {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (identical(_socket, socket)) {
-            _socket = null;
+          if (!identical(_socket, socket)) {
+            return;
           }
-          _events.add(
+          _socket = null;
+          final detail = 'Connection error: $error';
+          _emit(
+            PlayerNetworkEvent(PlayerNetworkEventType.error, detail: detail),
+          );
+          _emit(
             PlayerNetworkEvent(
-              PlayerNetworkEventType.error,
-              detail: 'Connection error: $error',
+              PlayerNetworkEventType.disconnected,
+              detail: detail,
             ),
           );
+          unawaited(socket.close(1011, 'Connection error.'));
         },
         cancelOnError: true,
       );
     } on Object catch (error) {
+      if (!_isCurrent(generation)) {
+        return;
+      }
       _socket = null;
-      _events.add(
+      _emit(
         PlayerNetworkEvent(
           PlayerNetworkEventType.error,
           detail: 'Could not reach the host: $error',
@@ -123,6 +142,7 @@ class PlayerClientService {
   }
 
   Future<void> disconnect({bool manual = true}) async {
+    _connectionGeneration++;
     _manualDisconnect = manual;
     final socket = _socket;
     _socket = null;
@@ -130,7 +150,20 @@ class PlayerClientService {
   }
 
   Future<void> dispose() async {
+    _disposed = true;
     await disconnect();
     await _events.close();
+  }
+
+  bool _isCurrent(int generation) {
+    return !_disposed &&
+        !_manualDisconnect &&
+        generation == _connectionGeneration;
+  }
+
+  void _emit(PlayerNetworkEvent event) {
+    if (!_events.isClosed) {
+      _events.add(event);
+    }
   }
 }
