@@ -166,9 +166,9 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                     const SizedBox(height: AppSizes.spaceMd),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Play sound on host'),
+                      title: const Text('Play sound on this computer'),
                       subtitle: const Text(
-                        'Play audio from this computer when a buzzer is pressed.',
+                        'Mute only this computer; phone sound is unchanged.',
                       ),
                       value: _soundEnabled,
                       onChanged: (value) {

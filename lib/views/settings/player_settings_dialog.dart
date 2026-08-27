@@ -35,7 +35,7 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
     _teamAColor = Color(widget.controller.match.teamAColor);
     _teamBColor = Color(widget.controller.match.teamBColor);
     _hapticsEnabled = widget.controller.preferences.hapticsEnabled;
-    _soundEnabled = widget.controller.preferences.soundEnabled;
+    _soundEnabled = widget.controller.mobileSoundEnabled;
   }
 
   @override
@@ -137,9 +137,9 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
                     ),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Play sound'),
+                      title: const Text('Play sound on this phone'),
                       subtitle: const Text(
-                        'Play a chime locally when a buzzer is pressed.',
+                        'Shared with the host control; host computer sound is unchanged.',
                       ),
                       value: _soundEnabled,
                       onChanged: (value) {
@@ -210,9 +210,9 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
         teamBName: _teamBController.text,
         teamAColor: _teamAColor.toARGB32(),
         teamBColor: _teamBColor.toARGB32(),
+        mobileSoundEnabled: _soundEnabled,
       );
       await widget.controller.setHapticsEnabled(_hapticsEnabled);
-      await widget.controller.setSoundEnabled(_soundEnabled);
       if (mounted) {
         Navigator.pop(context);
       }

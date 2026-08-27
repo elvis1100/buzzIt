@@ -127,7 +127,10 @@ class PlayerClientService {
       _emit(
         PlayerNetworkEvent(
           PlayerNetworkEventType.error,
-          detail: 'Could not reach the host: $error',
+          detail:
+              'Could not reach $host:$port. Check that both devices are on '
+              'the same Wi-Fi and that the host firewall allows this port. '
+              '($error)',
         ),
       );
       rethrow;

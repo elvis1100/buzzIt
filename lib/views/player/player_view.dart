@@ -133,6 +133,19 @@ class _SettingsBarState extends State<_SettingsBar> {
                     onPressed: () => _showSettings(context, widget.controller),
                     icon: const Icon(Icons.tune_rounded),
                   ),
+                  IconButton(
+                    tooltip: widget.controller.mobileSoundEnabled
+                        ? 'Mute phone sound'
+                        : 'Unmute phone sound',
+                    onPressed: () => widget.controller.setMobileSoundEnabled(
+                      !widget.controller.mobileSoundEnabled,
+                    ),
+                    icon: Icon(
+                      widget.controller.mobileSoundEnabled
+                          ? Icons.volume_up_rounded
+                          : Icons.volume_off_rounded,
+                    ),
+                  ),
                 ] else
                   IconButton(
                     tooltip: 'Expand',

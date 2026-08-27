@@ -10,23 +10,24 @@ class NetworkAddressService {
     final addresses = <String>{};
     for (final interface in interfaces) {
       final name = interface.name.toLowerCase();
-      // Skip common virtual/docker interfaces
-      if (name.contains('docker') ||
-          name.contains('vbox') ||
-          name.contains('vmnet') ||
-          name.startsWith('br-') ||
-          name.startsWith('veth')) {
+      if (_isVirtualInterface(name)) {
         continue;
       }
       for (final address in interface.addresses) {
-        addresses.add(address.address);
+        if (_isPrivateLanAddress(address.address)) {
+          addresses.add(address.address);
+        }
       }
     }
-    // Preserve a usable manual option on systems with only virtual adapters.
+    // A private address from a virtual adapter is still preferable to showing
+    // no pairing option at all, but only use it when no physical LAN address
+    // was found.
     if (addresses.isEmpty) {
       for (final interface in interfaces) {
         for (final address in interface.addresses) {
-          addresses.add(address.address);
+          if (_isPrivateLanAddress(address.address)) {
+            addresses.add(address.address);
+          }
         }
       }
     }
@@ -40,6 +41,32 @@ class NetworkAddressService {
         return a.compareTo(b);
       });
     return sorted;
+  }
+
+  bool _isVirtualInterface(String name) {
+    return name.contains('docker') ||
+        name.contains('vbox') ||
+        name.contains('vmnet') ||
+        name.contains('hyper-v') ||
+        name.contains('vethernet') ||
+        name.contains('wsl') ||
+        name.contains('tailscale') ||
+        name.contains('zerotier') ||
+        name.contains('wireguard') ||
+        name.startsWith('br-') ||
+        name.startsWith('veth');
+  }
+
+  bool _isPrivateLanAddress(String address) {
+    final octets = address.split('.').map(int.tryParse).toList();
+    if (octets.length != 4 || octets.any((value) => value == null)) {
+      return false;
+    }
+    final first = octets[0]!;
+    final second = octets[1]!;
+    return first == 10 ||
+        (first == 172 && second >= 16 && second <= 31) ||
+        (first == 192 && second == 168);
   }
 
   int _addressScore(String address) {

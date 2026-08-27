@@ -61,7 +61,9 @@ The shared `lib/main.dart` automatically selects the Android player experience o
 If pairing fails, verify that client isolation is disabled on the router and
 that the host TCP port is allowed through the desktop firewall. On Windows,
 allow the application on **Private networks** rather than disabling the
-firewall.
+firewall. If the host has a VPN, Docker, or virtual-machine adapter, use the
+private Wi-Fi/Ethernet address displayed in the host app (for example,
+`192.168.x.x`) rather than an address from the virtual adapter.
 
 ## 📦 Generating Local Executables & APKs
 

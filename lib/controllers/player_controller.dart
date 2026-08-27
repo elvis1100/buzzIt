@@ -35,6 +35,7 @@ class PlayerController extends ChangeNotifier {
   String? _errorMessage;
   bool _initialized = false;
   bool _manualDisconnect = false;
+  bool _mobileSoundEnabled = true;
   bool _disposed = false;
   int _retryAttempt = 0;
   Timer? _reconnectTimer;
@@ -48,6 +49,7 @@ class PlayerController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get initialized => _initialized;
   bool get isConnected => status == PlayerConnectionStatus.connected;
+  bool get mobileSoundEnabled => _mobileSoundEnabled;
   bool get canBuzz =>
       isConnected && gameState.isReady && optimisticWinner == null;
 
@@ -173,13 +175,17 @@ class PlayerController extends ChangeNotifier {
   void _applyStatePayload(Map<String, Object?> payload) {
     final rawState = payload['state'];
     final rawMatch = payload['match'];
+    final rawMobileSoundEnabled = payload['mobileSoundEnabled'];
+    if (rawMobileSoundEnabled is bool) {
+      _mobileSoundEnabled = rawMobileSoundEnabled;
+    }
     if (rawState is Map) {
       final oldWinner = _gameState.winner;
       _gameState = GameState.fromJson(Map<String, Object?>.from(rawState));
       final newWinner = _gameState.winner;
 
       if (oldWinner == null && newWinner != null) {
-        if (preferences.soundEnabled) {
+        if (mobileSoundEnabled) {
           unawaited(_playWinnerSound(newWinner));
         }
       }
@@ -219,6 +225,7 @@ class PlayerController extends ChangeNotifier {
     required String teamBName,
     required int teamAColor,
     required int teamBColor,
+    bool? mobileSoundEnabled,
   }) async {
     if (!isConnected) {
       return;
@@ -232,9 +239,16 @@ class PlayerController extends ChangeNotifier {
     _client.send(
       ProtocolMessage(
         type: MessageType.settingsUpdate,
-        payload: <String, Object?>{'match': match.toJson()},
+        payload: <String, Object?>{
+          'match': match.toJson(),
+          if (mobileSoundEnabled != null)
+            'mobileSoundEnabled': mobileSoundEnabled,
+        },
       ),
     );
+    if (mobileSoundEnabled != null) {
+      _mobileSoundEnabled = mobileSoundEnabled;
+    }
     _notify();
   }
 
@@ -244,9 +258,17 @@ class PlayerController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> setSoundEnabled(bool enabled) async {
-    _preferences = preferences.copyWith(soundEnabled: enabled);
-    await _storage.savePlayerPreferences(preferences);
+  Future<void> setMobileSoundEnabled(bool enabled) async {
+    if (!isConnected) {
+      return;
+    }
+    _mobileSoundEnabled = enabled;
+    _client.send(
+      ProtocolMessage(
+        type: MessageType.settingsUpdate,
+        payload: <String, Object?>{'mobileSoundEnabled': enabled},
+      ),
+    );
     _notify();
   }
 

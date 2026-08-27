@@ -19,8 +19,8 @@ version is `1`. Every message includes a unique `id`, a `type`, an optional
 1. The Android client connects to `ws://HOST:PORT/ws`.
 2. It sends `hello` with the six-digit pairing code.
 3. The host validates the code and enforces the one-client limit.
-4. The host sends `welcome` with the authoritative match configuration and
-   current round state.
+4. The host sends `welcome` with the authoritative match configuration,
+   shared phone-sound setting, and current round state.
 5. Subsequent state changes are delivered through `state_sync`.
 
 ## Message types
@@ -31,7 +31,7 @@ version is `1`. Every message includes a unique `id`, a `type`, an optional
 | `welcome` | Host | Confirm pairing and provide the complete current state. |
 | `buzz_attempt` | Player | Request a winner for the specified active round. |
 | `state_sync` | Host | Broadcast winner, reset, and match configuration changes. |
-| `settings_update` | Player | Request team name or color changes. |
+| `settings_update` | Player | Request team appearance or shared phone-sound changes. |
 | `ping` / `pong` | Either | Application-level liveness support. |
 | `error` | Either | Report invalid messages, pairing, or client-limit errors. |
 

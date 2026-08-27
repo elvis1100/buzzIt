@@ -156,18 +156,17 @@ class HostController extends ChangeNotifier {
         _acceptBuzz(team, attemptedRound);
       case MessageType.settingsUpdate:
         final rawMatch = message.payload['match'];
-        if (rawMatch is Map) {
-          final requested = MatchConfiguration.fromJson(
-            Map<String, Object?>.from(rawMatch),
-          );
+        final requestedMatch = rawMatch is Map
+            ? MatchConfiguration.fromJson(Map<String, Object?>.from(rawMatch))
+            : null;
+        final mobileSoundEnabled = message.payload['mobileSoundEnabled'];
+        if (requestedMatch != null || mobileSoundEnabled is bool) {
           unawaited(
-            updateMatch(
-              match.copyWith(
-                teamAName: requested.teamAName,
-                teamBName: requested.teamBName,
-                teamAColor: requested.teamAColor,
-                teamBColor: requested.teamBColor,
-              ),
+            _applyPlayerSettings(
+              match: requestedMatch,
+              mobileSoundEnabled: mobileSoundEnabled is bool
+                  ? mobileSoundEnabled
+                  : null,
             ),
           );
         }
@@ -239,6 +238,7 @@ class HostController extends ChangeNotifier {
         payload: <String, Object?>{
           'state': gameState.toJson(),
           'match': match.toJson(),
+          'mobileSoundEnabled': settings.mobileSoundEnabled,
         },
       ),
     );
@@ -252,6 +252,7 @@ class HostController extends ChangeNotifier {
         payload: <String, Object?>{
           'state': gameState.toJson(),
           'match': match.toJson(),
+          'mobileSoundEnabled': settings.mobileSoundEnabled,
         },
       ),
     );
@@ -268,6 +269,35 @@ class HostController extends ChangeNotifier {
 
   Future<void> updateMatch(MatchConfiguration value) async {
     _settings = settings.copyWith(match: value);
+    await _storage.saveHostSettings(settings);
+    _sendState();
+    _notify();
+  }
+
+  /// Enables or mutes buzzer audio played on the paired phone.
+  Future<void> setMobileSoundEnabled(bool enabled) async {
+    _settings = settings.copyWith(mobileSoundEnabled: enabled);
+    await _storage.saveHostSettings(settings);
+    _sendState();
+    _notify();
+  }
+
+  Future<void> _applyPlayerSettings({
+    MatchConfiguration? match,
+    bool? mobileSoundEnabled,
+  }) async {
+    final nextMatch = match == null
+        ? settings.match
+        : settings.match.copyWith(
+            teamAName: match.teamAName,
+            teamBName: match.teamBName,
+            teamAColor: match.teamAColor,
+            teamBColor: match.teamBColor,
+          );
+    _settings = settings.copyWith(
+      match: nextMatch,
+      mobileSoundEnabled: mobileSoundEnabled,
+    );
     await _storage.saveHostSettings(settings);
     _sendState();
     _notify();
@@ -304,6 +334,7 @@ class HostController extends ChangeNotifier {
       teamASoundPath: teamASoundPath,
       teamBSoundPath: teamBSoundPath,
       soundEnabled: soundEnabled,
+      mobileSoundEnabled: settings.mobileSoundEnabled,
     );
     await _storage.saveHostSettings(settings);
     _sendState();

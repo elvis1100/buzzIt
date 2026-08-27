@@ -8,6 +8,7 @@ class HostSettings {
     this.teamASoundPath,
     this.teamBSoundPath,
     this.soundEnabled = true,
+    this.mobileSoundEnabled = true,
   });
 
   static const defaults = HostSettings(
@@ -20,6 +21,7 @@ class HostSettings {
   final String? teamASoundPath;
   final String? teamBSoundPath;
   final bool soundEnabled;
+  final bool mobileSoundEnabled;
 
   HostSettings copyWith({
     MatchConfiguration? match,
@@ -27,6 +29,7 @@ class HostSettings {
     String? teamASoundPath,
     String? teamBSoundPath,
     bool? soundEnabled,
+    bool? mobileSoundEnabled,
   }) {
     return HostSettings(
       match: match ?? this.match,
@@ -37,6 +40,7 @@ class HostSettings {
       teamASoundPath: teamASoundPath ?? this.teamASoundPath,
       teamBSoundPath: teamBSoundPath ?? this.teamBSoundPath,
       soundEnabled: soundEnabled ?? this.soundEnabled,
+      mobileSoundEnabled: mobileSoundEnabled ?? this.mobileSoundEnabled,
     );
   }
 
@@ -47,6 +51,7 @@ class HostSettings {
       'teamASoundPath': teamASoundPath,
       'teamBSoundPath': teamBSoundPath,
       'soundEnabled': soundEnabled,
+      'mobileSoundEnabled': mobileSoundEnabled,
     };
   }
 
@@ -58,6 +63,7 @@ class HostSettings {
     final teamASoundPath = json['teamASoundPath'];
     final teamBSoundPath = json['teamBSoundPath'];
     final soundEnabled = json['soundEnabled'];
+    final mobileSoundEnabled = json['mobileSoundEnabled'];
     return HostSettings(
       match: MatchConfiguration.fromJson(matchMap),
       port: json['port'] is int
@@ -69,6 +75,8 @@ class HostSettings {
       teamASoundPath: teamASoundPath is String ? teamASoundPath : null,
       teamBSoundPath: teamBSoundPath is String ? teamBSoundPath : null,
       soundEnabled: soundEnabled is bool ? soundEnabled : true,
+      mobileSoundEnabled:
+          mobileSoundEnabled is bool ? mobileSoundEnabled : true,
     );
   }
 }
