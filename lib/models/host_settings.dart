@@ -7,6 +7,7 @@ class HostSettings {
     required this.port,
     this.teamASoundPath,
     this.teamBSoundPath,
+    this.soundEnabled = true,
   });
 
   static const defaults = HostSettings(
@@ -18,12 +19,14 @@ class HostSettings {
   final int port;
   final String? teamASoundPath;
   final String? teamBSoundPath;
+  final bool soundEnabled;
 
   HostSettings copyWith({
     MatchConfiguration? match,
     int? port,
     String? teamASoundPath,
     String? teamBSoundPath,
+    bool? soundEnabled,
   }) {
     return HostSettings(
       match: match ?? this.match,
@@ -33,6 +36,7 @@ class HostSettings {
       ),
       teamASoundPath: teamASoundPath ?? this.teamASoundPath,
       teamBSoundPath: teamBSoundPath ?? this.teamBSoundPath,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
     );
   }
 
@@ -42,6 +46,7 @@ class HostSettings {
       'port': port,
       'teamASoundPath': teamASoundPath,
       'teamBSoundPath': teamBSoundPath,
+      'soundEnabled': soundEnabled,
     };
   }
 
@@ -60,6 +65,7 @@ class HostSettings {
           : AppConstants.defaultPort,
       teamASoundPath: json['teamASoundPath'] as String?,
       teamBSoundPath: json['teamBSoundPath'] as String?,
+      soundEnabled: json['soundEnabled'] as bool? ?? true,
     );
   }
 }

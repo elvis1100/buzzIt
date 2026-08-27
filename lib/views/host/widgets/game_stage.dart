@@ -51,14 +51,7 @@ class GameStage extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Text(
-                  'ROUND ${controller.gameState.roundId}',
-                  style: TextStyle(
-                    color: foreground.withValues(alpha: 0.72),
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
+
                 const Spacer(),
                 Text(
                   controller.match.autoResetEnabled
@@ -88,24 +81,28 @@ class GameStage extends StatelessWidget {
                       ),
               ),
             ),
-            Row(
+            Wrap(
+              spacing: AppSizes.spaceMd,
+              runSpacing: AppSizes.spaceMd,
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
-                Expanded(
+                SizedBox(
+                  width: 140,
                   child: _TeamKey(
                     name: controller.match.teamAName,
                     color: Color(controller.match.teamAColor),
                     selected: winner == Team.a,
                   ),
                 ),
-                const SizedBox(width: AppSizes.spaceMd),
-                Expanded(
+                SizedBox(
+                  width: 140,
                   child: _TeamKey(
                     name: controller.match.teamBName,
                     color: Color(controller.match.teamBColor),
                     selected: winner == Team.b,
                   ),
                 ),
-                const SizedBox(width: AppSizes.spaceMd),
                 FilledButton.icon(
                   onPressed: winner == null ? null : controller.resetRound,
                   style: FilledButton.styleFrom(

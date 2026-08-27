@@ -27,19 +27,22 @@ class PlayerView extends StatelessWidget {
           return Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              Row(
+              Column(
                 children: <Widget>[
                   Expanded(
-                    child: BuzzerPanel(
-                      team: Team.a,
-                      name: controller.match.teamAName,
-                      color: Color(controller.match.teamAColor),
-                      displayedWinner: controller.displayedWinner,
-                      enabled: controller.canBuzz,
-                      onPressed: () => controller.buzz(Team.a),
+                    child: RotatedBox(
+                      quarterTurns: 2,
+                      child: BuzzerPanel(
+                        team: Team.a,
+                        name: controller.match.teamAName,
+                        color: Color(controller.match.teamAColor),
+                        displayedWinner: controller.displayedWinner,
+                        enabled: controller.canBuzz,
+                        onPressed: () => controller.buzz(Team.a),
+                      ),
                     ),
                   ),
-                  Container(width: 3, color: Colors.white),
+                  Container(height: 3, color: Colors.white),
                   Expanded(
                     child: BuzzerPanel(
                       team: Team.b,
@@ -52,60 +55,7 @@ class PlayerView extends StatelessWidget {
                   ),
                 ],
               ),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSizes.spaceSm),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.94),
-                        borderRadius: BorderRadius.circular(
-                          AppSizes.radiusPill,
-                        ),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: AppColors.ink.withValues(alpha: 0.12),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: AppSizes.spaceSm),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            const StatusPill(
-                              label: 'Connected',
-                              color: AppColors.success,
-                              icon: Icons.lan_rounded,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSizes.spaceSm,
-                              ),
-                              child: Text(
-                                'Round ${controller.gameState.roundId}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.inkMuted,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Buzzer settings',
-                              onPressed: () =>
-                                  _showSettings(context, controller),
-                              icon: const Icon(Icons.tune_rounded),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              _SettingsBar(controller: controller),
               if (controller.errorMessage != null)
                 SafeArea(
                   child: Align(
@@ -125,6 +75,75 @@ class PlayerView extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+}
+
+class _SettingsBar extends StatefulWidget {
+  final PlayerController controller;
+  const _SettingsBar({required this.controller});
+
+  @override
+  State<_SettingsBar> createState() => _SettingsBarState();
+}
+
+class _SettingsBarState extends State<_SettingsBar> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.center,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _expanded = !_expanded;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(AppSizes.radiusPill),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: AppColors.ink.withValues(alpha: 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: _expanded
+                ? const EdgeInsets.only(left: AppSizes.spaceSm)
+                : const EdgeInsets.all(4.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (_expanded) ...[
+                  const StatusPill(
+                    label: 'Connected',
+                    color: AppColors.success,
+                    icon: Icons.lan_rounded,
+                  ),
+
+                  IconButton(
+                    tooltip: 'Buzzer settings',
+                    onPressed: () => _showSettings(context, widget.controller),
+                    icon: const Icon(Icons.tune_rounded),
+                  ),
+                ] else
+                  IconButton(
+                    tooltip: 'Expand',
+                    onPressed: () => setState(() => _expanded = true),
+                    icon: const Icon(Icons.menu_rounded),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

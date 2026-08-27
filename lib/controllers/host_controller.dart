@@ -87,12 +87,10 @@ class HostController extends ChangeNotifier {
     _networkSubscription = _server.events.listen(_handleNetworkEvent);
     _pairingCode = _pairing.generateCode();
     try {
-      final audioInitialization = _audio.initialize();
       final results = await Future.wait<Object>(<Future<Object>>[
         _storage.loadHostSettings(),
         _networkAddresses.findLocalIpv4Addresses(),
       ]);
-      await audioInitialization;
       _settings = results[0] as HostSettings;
       _localAddresses = results[1] as List<String>;
       _selectedAddress = _localAddresses.firstOrNull ?? '';
@@ -187,14 +185,16 @@ class HostController extends ChangeNotifier {
       return;
     }
     _gameState = next;
-    unawaited(
-      _audio.play(
-        team,
-        customPath: team == Team.a
-            ? settings.teamASoundPath
-            : settings.teamBSoundPath,
-      ),
-    );
+    if (settings.soundEnabled) {
+      unawaited(
+        _audio.play(
+          team,
+          customPath: team == Team.a
+              ? settings.teamASoundPath
+              : settings.teamBSoundPath,
+        ),
+      );
+    }
     _scheduleReset();
     _sendState();
     _notify();
@@ -268,6 +268,12 @@ class HostController extends ChangeNotifier {
     _settings = settings.copyWith(match: value);
     await _storage.saveHostSettings(settings);
     _sendState();
+    _notify();
+  }
+
+  Future<void> setSoundEnabled(bool enabled) async {
+    _settings = settings.copyWith(soundEnabled: enabled);
+    await _storage.saveHostSettings(settings);
     _notify();
   }
 

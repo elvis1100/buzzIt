@@ -22,37 +22,33 @@ team sound, and synchronized back to the phone.
 ## Requirements
 
 - Flutter 3.44.8 or a compatible newer stable release.
-- Android 6.0 (API 23) or newer.
+- Android 7.0 (API 24) or newer.
 - Windows 10/11 or a Linux desktop with GTK 3 and GStreamer.
 - The host and phone must be connected to the same local network.
 
 No account, cloud service, database, or internet connection is required during
 a match.
 
-## Run locally
+## 🚀 Getting Started (For New Clones)
 
-Install packages and verify the project:
+If you have just cloned the project, follow these steps to get everything running:
 
+1. **Fetch dependencies**:
 ```bash
 flutter pub get
-flutter analyze
-flutter test
 ```
-
-Run the host on Linux:
-
+2. **Run the host on Linux/Windows**:
 ```bash
 flutter run -d linux
+# or
+flutter run -d windows
 ```
-
-Run the buzzer on an Android device:
-
+3. **Run the buzzer on an Android device**:
 ```bash
 flutter run -d <android-device-id>
 ```
 
-The shared `lib/main.dart` selects the Android player experience on Android and
-the host experience on Windows or Linux.
+The shared `lib/main.dart` automatically selects the Android player experience on Android and the Host server experience on Windows or Linux.
 
 ## Pair a buzzer
 
@@ -67,42 +63,34 @@ that the host TCP port is allowed through the desktop firewall. On Windows,
 allow the application on **Private networks** rather than disabling the
 firewall.
 
-## Release builds
+## 📦 Generating Executables & APKs
+
+To build the final production files that you can share with others, use the following commands. 
 
 ### Android
 
 ```bash
-flutter build apk --release
+flutter build apk
 ```
-
-The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The local
-project currently uses the debug key for release-mode development builds.
-Configure a private release keystore before publishing the app.
+**Where is the file?** ➔ The final APK is located at: `build/app/outputs/flutter-apk/app-release.apk`.
 
 ### Linux
 
-Install the Flutter Linux prerequisites and GStreamer development packages,
-then run:
+Install the Flutter Linux prerequisites and GStreamer development packages, then run:
 
 ```bash
-flutter build linux --release
+flutter build linux
 ```
-
-The relocatable application bundle is written under
-`build/linux/x64/release/bundle/`. Linux desktop-entry and icon templates are in
-`packaging/linux/`.
+**Where is the file?** ➔ The final compiled Linux executable folder is located at: `build/linux/x64/release/bundle/`.
 
 ### Windows
 
-Windows applications must be compiled on Windows:
+*Note: Windows applications must be compiled on an actual Windows machine.*
 
 ```powershell
-flutter build windows --release
+flutter build windows
 ```
-
-The release bundle is written under `build\windows\x64\runner\Release\`. The
-GitHub Actions workflow also builds and uploads a Windows bundle from a Windows
-runner.
+**Where is the file?** ➔ The final compiled Windows folder is located at: `build\windows\x64\runner\Release\`.
 
 ## Project structure
 

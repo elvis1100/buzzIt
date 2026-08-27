@@ -51,48 +51,42 @@ class _PlayerConnectionViewState extends State<PlayerConnectionView> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1080),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSizes.spaceLg),
-              child: Row(
+            child: SingleChildScrollView(
+              child: Column(
                 children: <Widget>[
-                  Expanded(
-                    flex: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSizes.spaceXl),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const AppLogo(size: 128),
-                          const SizedBox(height: AppSizes.spaceLg),
-                          Text(
-                            'Ready to buzz?',
-                            style: Theme.of(context).textTheme.displaySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -1.2,
-                                ),
-                          ),
-                          const SizedBox(height: AppSizes.spaceSm),
-                          Text(
-                            'Connect to the host on the same Wi-Fi network. Once paired, both team buzzers fill this screen.',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: AppColors.inkMuted,
-                                  height: 1.45,
-                                ),
-                          ),
-                        ],
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSizes.spaceLg),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        const AppLogo(size: 128),
+                        const SizedBox(height: AppSizes.spaceLg),
+                        Text(
+                          'Ready to buzz?',
+                          style: Theme.of(context).textTheme.displaySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.2,
+                              ),
+                        ),
+                        const SizedBox(height: AppSizes.spaceSm),
+                        Text(
+                          'Connect to the host on the same Wi-Fi network. Once paired, both team buzzers fill this screen.',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: AppColors.inkMuted,
+                                height: 1.45,
+                              ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: AppSizes.spaceLg),
-                  Expanded(
-                    flex: 5,
-                    child: Card(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(AppSizes.spaceXl),
-                        child: Column(
+                  const SizedBox(height: AppSizes.spaceLg),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSizes.spaceLg),
+                      child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
                             Text(
@@ -136,36 +130,26 @@ class _PlayerConnectionViewState extends State<PlayerConnectionView> {
                                 ],
                               ),
                             ),
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  flex: 3,
-                                  child: TextField(
-                                    controller: _hostController,
-                                    enabled: !connecting,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Host IP address',
-                                      hintText: '192.168.1.25',
-                                      prefixIcon: Icon(Icons.router_outlined),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSizes.spaceSm),
-                                SizedBox(
-                                  width: 120,
-                                  child: TextField(
-                                    controller: _portController,
-                                    enabled: !connecting,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: <TextInputFormatter>[
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    decoration: const InputDecoration(
-                                      labelText: 'Port',
-                                    ),
-                                  ),
-                                ),
+                            TextField(
+                              controller: _hostController,
+                              enabled: !connecting,
+                              decoration: const InputDecoration(
+                                labelText: 'Host IP address',
+                                hintText: '192.168.1.25',
+                                prefixIcon: Icon(Icons.router_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.spaceSm),
+                            TextField(
+                              controller: _portController,
+                              enabled: !connecting,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.digitsOnly,
                               ],
+                              decoration: const InputDecoration(
+                                labelText: 'Port',
+                              ),
                             ),
                             const SizedBox(height: AppSizes.spaceSm),
                             TextField(
@@ -231,8 +215,7 @@ class _PlayerConnectionViewState extends State<PlayerConnectionView> {
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
               ),
             ),
           ),

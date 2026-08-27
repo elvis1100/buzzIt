@@ -23,32 +23,20 @@ class HostHeader extends StatelessWidget {
       children: <Widget>[
         const AppLogo(size: 58),
         const SizedBox(width: AppSizes.spaceMd),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'BuzzIt Host',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: AppSizes.spaceXs),
-              Text(
-                'Fast, fair buzzing on your local network',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppColors.inkMuted),
-              ),
-            ],
+        Text(
+          'BuzzIt Host',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
+        const SizedBox(width: AppSizes.spaceMd),
         StatusPill(
-          label: listening ? 'Host online' : 'Host unavailable',
+          label: listening ? 'Server running' : 'Server down',
           color: listening ? AppColors.success : AppColors.error,
           icon: listening ? Icons.lan_rounded : Icons.lan_outlined,
         ),
+        const Spacer(),
         const SizedBox(width: AppSizes.spaceMd),
         IconButton.filledTonal(
           tooltip: 'Host settings',

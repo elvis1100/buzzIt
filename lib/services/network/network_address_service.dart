@@ -9,13 +9,40 @@ class NetworkAddressService {
     );
     final addresses = <String>{};
     for (final interface in interfaces) {
+      final name = interface.name.toLowerCase();
+      // Skip common virtual/docker interfaces
+      if (name.contains('docker') ||
+          name.contains('vbox') ||
+          name.contains('vmnet') ||
+          name.startsWith('br-') ||
+          name.startsWith('veth')) {
+        continue;
+      }
       for (final address in interface.addresses) {
         if (_isPrivate(address.address)) {
           addresses.add(address.address);
         }
       }
     }
-    final sorted = addresses.toList()..sort();
+    // Fallback: if we filtered out everything, just add them all back
+    if (addresses.isEmpty) {
+      for (final interface in interfaces) {
+        for (final address in interface.addresses) {
+          if (_isPrivate(address.address)) {
+            addresses.add(address.address);
+          }
+        }
+      }
+    }
+    final sorted = addresses.toList()..sort((a, b) {
+      // Prioritize 192.168.* (score 2) and 10.* (score 1) over 172.* (score 0)
+      final scoreA = a.startsWith('192.168.') ? 2 : a.startsWith('10.') ? 1 : 0;
+      final scoreB = b.startsWith('192.168.') ? 2 : b.startsWith('10.') ? 1 : 0;
+      if (scoreA != scoreB) {
+        return scoreB.compareTo(scoreA);
+      }
+      return a.compareTo(b);
+    });
     return sorted;
   }
 

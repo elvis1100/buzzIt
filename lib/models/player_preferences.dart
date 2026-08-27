@@ -6,12 +6,14 @@ class PlayerPreferences {
     this.port = AppConstants.defaultPort,
     this.pairingCode = '',
     this.hapticsEnabled = true,
+    this.soundEnabled = true,
   });
 
   final String host;
   final int port;
   final String pairingCode;
   final bool hapticsEnabled;
+  final bool soundEnabled;
 
   bool get hasConnectionDetails {
     return host.trim().isNotEmpty &&
@@ -25,12 +27,14 @@ class PlayerPreferences {
     int? port,
     String? pairingCode,
     bool? hapticsEnabled,
+    bool? soundEnabled,
   }) {
     return PlayerPreferences(
       host: host?.trim() ?? this.host,
       port: port ?? this.port,
       pairingCode: pairingCode ?? this.pairingCode,
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
     );
   }
 
@@ -40,6 +44,7 @@ class PlayerPreferences {
       'port': port,
       'pairingCode': pairingCode,
       'hapticsEnabled': hapticsEnabled,
+      'soundEnabled': soundEnabled,
     };
   }
 
@@ -49,6 +54,7 @@ class PlayerPreferences {
       port: json['port'] as int? ?? AppConstants.defaultPort,
       pairingCode: json['pairingCode'] as String? ?? '',
       hapticsEnabled: json['hapticsEnabled'] as bool? ?? true,
+      soundEnabled: json['soundEnabled'] as bool? ?? true,
     );
   }
 }

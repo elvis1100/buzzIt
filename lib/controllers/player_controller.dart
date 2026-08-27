@@ -9,17 +9,23 @@ import '../models/match_configuration.dart';
 import '../models/player_preferences.dart';
 import '../models/protocol_message.dart';
 import '../models/team.dart';
+import '../services/audio/audio_service.dart';
 import '../services/network/player_client_service.dart';
 import '../services/pairing/pairing_service.dart';
 import '../services/storage/storage_service.dart';
 
 class PlayerController extends ChangeNotifier {
-  PlayerController({StorageService? storage, PlayerClientService? client})
-    : _storage = storage ?? StorageService(),
-      _client = client ?? PlayerClientService();
+  PlayerController({
+    StorageService? storage,
+    PlayerClientService? client,
+    AudioService? audio,
+  })  : _storage = storage ?? StorageService(),
+        _client = client ?? PlayerClientService(),
+        _audio = audio ?? AudioService();
 
   final StorageService _storage;
   final PlayerClientService _client;
+  final AudioService _audio;
 
   PlayerPreferences _preferences = const PlayerPreferences();
   MatchConfiguration _match = MatchConfiguration.defaults;
@@ -159,7 +165,16 @@ class PlayerController extends ChangeNotifier {
     final rawState = payload['state'];
     final rawMatch = payload['match'];
     if (rawState is Map) {
+      final oldWinner = _gameState.winner;
       _gameState = GameState.fromJson(Map<String, Object?>.from(rawState));
+      final newWinner = _gameState.winner;
+
+      if (oldWinner == null && newWinner != null) {
+        if (preferences.soundEnabled) {
+          unawaited(_audio.play(newWinner));
+        }
+      }
+
       _optimisticWinner = null;
     }
     if (rawMatch is Map) {
@@ -215,6 +230,12 @@ class PlayerController extends ChangeNotifier {
     _notify();
   }
 
+  Future<void> setSoundEnabled(bool enabled) async {
+    _preferences = preferences.copyWith(soundEnabled: enabled);
+    await _storage.savePlayerPreferences(preferences);
+    _notify();
+  }
+
   Future<void> disconnect() async {
     _manualDisconnect = true;
     _retryAttempt = 0;
@@ -261,6 +282,7 @@ class PlayerController extends ChangeNotifier {
     _reconnectTimer?.cancel();
     unawaited(_networkSubscription?.cancel());
     unawaited(_client.dispose());
+    unawaited(_audio.dispose());
     super.dispose();
   }
 }

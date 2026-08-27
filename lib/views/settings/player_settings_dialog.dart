@@ -19,6 +19,7 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
   late Color _teamAColor;
   late Color _teamBColor;
   late bool _hapticsEnabled;
+  late bool _soundEnabled;
   bool _saving = false;
 
   @override
@@ -33,6 +34,7 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
     _teamAColor = Color(widget.controller.match.teamAColor);
     _teamBColor = Color(widget.controller.match.teamBColor);
     _hapticsEnabled = widget.controller.preferences.hapticsEnabled;
+    _soundEnabled = widget.controller.preferences.soundEnabled;
   }
 
   @override
@@ -132,6 +134,17 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
                         setState(() => _hapticsEnabled = value);
                       },
                     ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Play sound'),
+                      subtitle: const Text(
+                        'Play a chime locally when a buzzer is pressed.',
+                      ),
+                      value: _soundEnabled,
+                      onChanged: (value) {
+                        setState(() => _soundEnabled = value);
+                      },
+                    ),
                     const SizedBox(height: AppSizes.spaceMd),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
@@ -184,6 +197,7 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
       teamBColor: _teamBColor.toARGB32(),
     );
     await widget.controller.setHapticsEnabled(_hapticsEnabled);
+    await widget.controller.setSoundEnabled(_soundEnabled);
     if (mounted) {
       Navigator.pop(context);
     }

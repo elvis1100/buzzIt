@@ -156,7 +156,7 @@ class BuzzerPanel extends StatelessWidget {
                                 const SizedBox(height: AppSizes.spaceSm),
                                 Text(
                                   isWinner
-                                      ? 'YOU BUZZED FIRST!'
+                                      ? 'YOU HIT FIRST!'
                                       : isOpponent
                                       ? 'ROUND LOCKED'
                                       : 'TAP ANYWHERE',
@@ -175,7 +175,7 @@ class BuzzerPanel extends StatelessWidget {
                           displayedWinner == null
                               ? 'Ready'
                               : isWinner
-                              ? 'Winner confirmed by host'
+                              ? ''
                               : 'Waiting for reset',
                           style: TextStyle(
                             color: foreground.withValues(alpha: 0.72),

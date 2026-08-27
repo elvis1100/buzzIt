@@ -24,6 +24,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
   late Color _teamBColor;
   late bool _autoResetEnabled;
   late int _autoResetSeconds;
+  late bool _soundEnabled;
   bool _saving = false;
   String? _validationMessage;
 
@@ -38,6 +39,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
     _teamBColor = Color(settings.match.teamBColor);
     _autoResetEnabled = settings.match.autoResetEnabled;
     _autoResetSeconds = settings.match.autoResetSeconds;
+    _soundEnabled = settings.soundEnabled;
   }
 
   @override
@@ -159,6 +161,18 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       subtitle: 'WAV, MP3, OGG, or M4A up to 10 MB.',
                     ),
                     const SizedBox(height: AppSizes.spaceMd),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Play sound on host'),
+                      subtitle: const Text(
+                        'Play audio from this computer when a buzzer is pressed.',
+                      ),
+                      value: _soundEnabled,
+                      onChanged: (value) {
+                        setState(() => _soundEnabled = value);
+                      },
+                    ),
+                    const SizedBox(height: AppSizes.spaceMd),
                     _SoundRow(
                       teamLabel: _teamAController.text.trim().isEmpty
                           ? 'Team A'
@@ -265,6 +279,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
       autoResetSeconds: _autoResetSeconds,
     );
     await widget.controller.updateMatch(match);
+    await widget.controller.setSoundEnabled(_soundEnabled);
     await widget.controller.updatePort(port);
     if (mounted) {
       Navigator.pop(context);
