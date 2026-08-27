@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BuzzIt Host
+Comment=Local-network game buzzer host
+Exec=buzzit
+Icon=buzzit
+Terminal=false
+Categories=Game;Utility;
+StartupNotify=true
+StartupWMClass=com.buzzit.app
