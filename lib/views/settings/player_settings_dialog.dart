@@ -216,11 +216,11 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
       if (mounted) {
         Navigator.pop(context);
       }
-    } on Object catch (error) {
+    } on Object {
       if (mounted) {
         setState(() {
           _saving = false;
-          _errorMessage = 'Could not save buzzer settings: $error';
+          _errorMessage = 'Could not save buzzer settings. Try again.';
         });
       }
     }
@@ -232,10 +232,10 @@ class _PlayerSettingsDialogState extends State<PlayerSettingsDialog> {
       if (mounted) {
         Navigator.pop(context);
       }
-    } on Object catch (error) {
+    } on Object {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Could not disconnect cleanly: $error';
+          _errorMessage = 'Could not disconnect. Try again.';
         });
       }
     }

@@ -97,4 +97,48 @@ void main() {
     expect(decoded.type, MessageType.error);
     expect(decoded.payload['code'], 'invalid_message');
   });
+  test('busy replacement port keeps the current listener and client', () async {
+    final server = HostServerService();
+    addTearDown(server.dispose);
+    await server.start(port: 0, pairingCode: '123456');
+    final originalPort = server.boundPort!;
+    final connected = server.events.firstWhere(
+      (event) => event.type == HostNetworkEventType.clientConnected,
+    );
+    final socket = await WebSocket.connect(
+      'ws://127.0.0.1:$originalPort${AppConstants.websocketPath}',
+    );
+    addTearDown(socket.close);
+    socket.add(
+      ProtocolMessage(
+        type: MessageType.hello,
+        payload: const <String, Object?>{'code': '123456'},
+      ).encode(),
+    );
+    await connected.timeout(const Duration(seconds: 2));
+
+    final occupied = await HttpServer.bind(InternetAddress.anyIPv4, 0);
+    addTearDown(() => occupied.close(force: true));
+    await expectLater(
+      server.start(port: occupied.port, pairingCode: '654321'),
+      throwsA(isA<SocketException>()),
+    );
+
+    expect(server.boundPort, originalPort);
+    expect(server.hasClient, isTrue);
+    final received = server.events.firstWhere(
+      (event) => event.type == HostNetworkEventType.message,
+    );
+    socket.add(
+      ProtocolMessage(
+        type: MessageType.buzzAttempt,
+        roundId: 1,
+        payload: const <String, Object?>{'team': 'a'},
+      ).encode(),
+    );
+    expect(
+      (await received.timeout(const Duration(seconds: 2))).message?.type,
+      MessageType.buzzAttempt,
+    );
+  });
 }

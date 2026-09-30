@@ -75,8 +75,9 @@ class HostSettings {
       teamASoundPath: teamASoundPath is String ? teamASoundPath : null,
       teamBSoundPath: teamBSoundPath is String ? teamBSoundPath : null,
       soundEnabled: soundEnabled is bool ? soundEnabled : true,
-      mobileSoundEnabled:
-          mobileSoundEnabled is bool ? mobileSoundEnabled : true,
+      mobileSoundEnabled: mobileSoundEnabled is bool
+          ? mobileSoundEnabled
+          : true,
     );
   }
 }

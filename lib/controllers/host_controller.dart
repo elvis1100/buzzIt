@@ -16,6 +16,13 @@ import '../services/network/network_address_service.dart';
 import '../services/pairing/pairing_service.dart';
 import '../services/storage/storage_service.dart';
 
+/// A recoverable settings failure with a message suitable for the dialog.
+class HostSettingsSaveException implements Exception {
+  const HostSettingsSaveException(this.message);
+
+  final String message;
+}
+
 class HostController extends ChangeNotifier {
   HostController({
     StorageService? storage,
@@ -61,7 +68,7 @@ class HostController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   String? get pairingPayload {
-    if (selectedAddress.isEmpty) {
+    if (selectedAddress.isEmpty || serverStatus != HostServerStatus.listening) {
       return null;
     }
     return PairingPayload(
@@ -94,14 +101,18 @@ class HostController extends ChangeNotifier {
     final startupWarnings = <String>[];
     try {
       _settings = await _storage.loadHostSettings();
-    } on Object catch (error) {
-      startupWarnings.add('Could not load saved host settings: $error');
+    } on Object {
+      startupWarnings.add(
+        'Could not load saved host settings. Defaults are in use.',
+      );
     }
     try {
       _localAddresses = await _networkAddresses.findLocalIpv4Addresses();
       _selectedAddress = _localAddresses.firstOrNull ?? '';
-    } on Object catch (error) {
-      startupWarnings.add('Could not detect local network addresses: $error');
+    } on Object {
+      startupWarnings.add(
+        'Could not detect local network addresses. Check the network connection.',
+      );
     }
     await _startServer();
     if (_serverStatus == HostServerStatus.listening &&
@@ -119,9 +130,10 @@ class HostController extends ChangeNotifier {
       await _server.start(port: settings.port, pairingCode: pairingCode);
       _serverStatus = HostServerStatus.listening;
       _errorMessage = null;
-    } on Object catch (error) {
+    } on Object {
       _serverStatus = HostServerStatus.failed;
-      _errorMessage = 'Could not listen on port ${settings.port}: $error';
+      _errorMessage =
+          'Could not listen on port ${settings.port}. Choose an available port.';
     }
     _notify();
   }
@@ -139,7 +151,8 @@ class HostController extends ChangeNotifier {
           _handleMessage(message);
         }
       case HostNetworkEventType.error:
-        _errorMessage = event.detail;
+        _errorMessage =
+            'A network error occurred. Check the connection and try again.';
     }
     _notify();
   }
@@ -268,16 +281,30 @@ class HostController extends ChangeNotifier {
   }
 
   Future<void> updateMatch(MatchConfiguration value) async {
-    _settings = settings.copyWith(match: value);
-    await _storage.saveHostSettings(settings);
+    final nextSettings = settings.copyWith(match: value);
+    try {
+      await _storage.saveHostSettings(nextSettings);
+    } on Object {
+      _errorMessage = 'Could not save match settings. Try again.';
+      _notify();
+      return;
+    }
+    _settings = nextSettings;
     _sendState();
     _notify();
   }
 
   /// Enables or mutes buzzer audio played on the paired phone.
   Future<void> setMobileSoundEnabled(bool enabled) async {
-    _settings = settings.copyWith(mobileSoundEnabled: enabled);
-    await _storage.saveHostSettings(settings);
+    final nextSettings = settings.copyWith(mobileSoundEnabled: enabled);
+    try {
+      await _storage.saveHostSettings(nextSettings);
+    } on Object {
+      _errorMessage = 'Could not save phone sound setting. Try again.';
+      _notify();
+      return;
+    }
+    _settings = nextSettings;
     _sendState();
     _notify();
   }
@@ -294,11 +321,20 @@ class HostController extends ChangeNotifier {
             teamAColor: match.teamAColor,
             teamBColor: match.teamBColor,
           );
-    _settings = settings.copyWith(
+    final nextSettings = settings.copyWith(
       match: nextMatch,
       mobileSoundEnabled: mobileSoundEnabled,
     );
-    await _storage.saveHostSettings(settings);
+    try {
+      await _storage.saveHostSettings(nextSettings);
+    } on Object {
+      _errorMessage = 'Could not save buzzer settings. Try again.';
+      _sendError('settings_save_failed', 'Could not save buzzer settings.');
+      _sendState();
+      _notify();
+      return;
+    }
+    _settings = nextSettings;
     _sendState();
     _notify();
   }
@@ -311,6 +347,9 @@ class HostController extends ChangeNotifier {
     return _audio.previewSelection(team, selection);
   }
 
+  /// Saves a host settings draft. A changed port is bound before the old
+  /// listener closes; failures keep the previous settings and surface a
+  /// [HostSettingsSaveException] for the dialog to show.
   Future<void> saveSettings({
     required MatchConfiguration match,
     required bool soundEnabled,
@@ -318,30 +357,101 @@ class HostController extends ChangeNotifier {
     SoundSelection? teamASound,
     SoundSelection? teamBSound,
   }) async {
-    var teamASoundPath = settings.teamASoundPath;
-    var teamBSoundPath = settings.teamBSoundPath;
-    if (teamASound != null) {
-      teamASoundPath = await _audio.persistSound(Team.a, teamASound);
-    }
-    if (teamBSound != null) {
-      teamBSoundPath = await _audio.persistSound(Team.b, teamBSound);
+    final previousSettings = settings;
+    final nextPort = port.clamp(
+      AppConstants.minimumPort,
+      AppConstants.maximumPort,
+    );
+    final portChanged = nextPort != previousSettings.port;
+    if (portChanged) {
+      final wasListening = _serverStatus == HostServerStatus.listening;
+      _serverStatus = HostServerStatus.starting;
+      _notify();
+      try {
+        await _server.start(port: nextPort, pairingCode: pairingCode);
+      } on Object {
+        _serverStatus = wasListening
+            ? HostServerStatus.listening
+            : HostServerStatus.failed;
+        _errorMessage =
+            'Could not listen on port $nextPort. Choose an available port.';
+        _notify();
+        throw HostSettingsSaveException(_errorMessage!);
+      }
+      _clientConnected = false;
+      _serverStatus = HostServerStatus.listening;
     }
 
-    final portChanged = port != settings.port;
-    _settings = HostSettings(
-      match: match,
-      port: port.clamp(AppConstants.minimumPort, AppConstants.maximumPort),
-      teamASoundPath: teamASoundPath,
-      teamBSoundPath: teamBSoundPath,
-      soundEnabled: soundEnabled,
-      mobileSoundEnabled: settings.mobileSoundEnabled,
-    );
-    await _storage.saveHostSettings(settings);
+    String? persistedASound;
+    String? persistedBSound;
+    late final HostSettings nextSettings;
+    try {
+      if (teamASound != null) {
+        persistedASound = await _audio.persistSound(Team.a, teamASound);
+      }
+      if (teamBSound != null) {
+        persistedBSound = await _audio.persistSound(Team.b, teamBSound);
+      }
+      nextSettings = HostSettings(
+        match: match,
+        port: nextPort,
+        teamASoundPath: persistedASound ?? previousSettings.teamASoundPath,
+        teamBSoundPath: persistedBSound ?? previousSettings.teamBSoundPath,
+        soundEnabled: soundEnabled,
+        mobileSoundEnabled: previousSettings.mobileSoundEnabled,
+      );
+      await _storage.saveHostSettings(nextSettings);
+    } on Object {
+      // New sounds are separate files, so failed saves leave the selected
+      // sounds untouched. Cleanup is best effort; the next save prunes leftovers.
+      for (final filePath in <String?>[persistedASound, persistedBSound]) {
+        if (filePath != null) {
+          try {
+            await _audio.discardSound(filePath);
+          } on Object {
+            // Preserve the original save failure and restore the host port.
+          }
+        }
+      }
+      if (portChanged) {
+        try {
+          await _server.start(
+            port: previousSettings.port,
+            pairingCode: pairingCode,
+          );
+          _serverStatus = HostServerStatus.listening;
+        } on Object {
+          try {
+            await _server.stop();
+          } on Object {
+            // The listener is already unusable; report the failed recovery.
+          }
+          _serverStatus = HostServerStatus.failed;
+          _errorMessage =
+              'Could not restore the previous host port. Restart the host and check the port.';
+          _notify();
+          throw HostSettingsSaveException(_errorMessage!);
+        }
+      }
+      _errorMessage = 'Could not save host settings. Try again.';
+      _notify();
+      throw HostSettingsSaveException(_errorMessage!);
+    }
+
+    _settings = nextSettings;
+    _errorMessage = null;
     _sendState();
-    if (portChanged) {
-      _clientConnected = false;
-      await _startServer();
-    } else {
+    _notify();
+    try {
+      if (persistedASound != null) {
+        await _audio.pruneSounds(Team.a, persistedASound);
+      }
+      if (persistedBSound != null) {
+        await _audio.pruneSounds(Team.b, persistedBSound);
+      }
+    } on Object {
+      _errorMessage =
+          'Settings saved, but older sound files could not be removed.';
       _notify();
     }
   }
@@ -349,8 +459,9 @@ class HostController extends ChangeNotifier {
   Future<void> _playWinnerSound(Team team) async {
     try {
       await testSound(team);
-    } on Object catch (error) {
-      _errorMessage = 'Could not play the buzzer sound: $error';
+    } on Object {
+      _errorMessage =
+          'Could not play the buzzer sound. Choose another sound or try again.';
       _notify();
     }
   }

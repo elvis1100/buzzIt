@@ -36,10 +36,21 @@ class HostServerService {
   int? get boundPort => _server?.port;
 
   Future<void> start({required int port, required String pairingCode}) async {
-    await stop();
+    // Bind a different port before closing the current listener, so a busy
+    // replacement port cannot interrupt an active match.
+    if (_server?.port == port) {
+      await stop();
+    }
+    final replacement = await HttpServer.bind(InternetAddress.anyIPv4, port);
+    try {
+      await stop();
+    } on Object {
+      await replacement.close(force: true);
+      rethrow;
+    }
     _pairingCode = pairingCode;
-    _server = await HttpServer.bind(InternetAddress.anyIPv4, port);
-    _server!.listen(
+    _server = replacement;
+    replacement.listen(
       _handleRequest,
       onError: (Object error, StackTrace stackTrace) {
         _emitError('Server error: $error');

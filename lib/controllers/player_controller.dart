@@ -38,6 +38,7 @@ class PlayerController extends ChangeNotifier {
   bool _mobileSoundEnabled = true;
   bool _disposed = false;
   int _retryAttempt = 0;
+  int _connectionIntent = 0;
   Timer? _reconnectTimer;
   StreamSubscription<PlayerNetworkEvent>? _networkSubscription;
 
@@ -62,8 +63,9 @@ class PlayerController extends ChangeNotifier {
     _networkSubscription = _client.events.listen(_handleNetworkEvent);
     try {
       _preferences = await _storage.loadPlayerPreferences();
-    } on Object catch (error) {
-      _errorMessage = 'Could not load saved buzzer settings: $error';
+    } on Object {
+      _errorMessage =
+          'Could not load saved buzzer settings. Re-enter the host details.';
     }
     _initialized = true;
     _notify();
@@ -83,14 +85,21 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> connectWith(PlayerPreferences value) async {
+    final intent = ++_connectionIntent;
     _reconnectTimer?.cancel();
     _manualDisconnect = false;
     _preferences = value;
     _errorMessage = null;
     try {
-      await _storage.savePlayerPreferences(preferences);
-    } on Object catch (error) {
-      _errorMessage = 'Could not save connection details: $error';
+      await _storage.savePlayerPreferences(value);
+    } on Object {
+      if (intent == _connectionIntent && !_manualDisconnect && !_disposed) {
+        _errorMessage =
+            'Could not save connection details. You may need to pair again next time.';
+      }
+    }
+    if (_disposed || _manualDisconnect || intent != _connectionIntent) {
+      return;
     }
     _status = _retryAttempt == 0
         ? PlayerConnectionStatus.connecting
@@ -98,12 +107,14 @@ class PlayerController extends ChangeNotifier {
     _notify();
     try {
       await _client.connect(
-        host: preferences.host,
-        port: preferences.port,
-        pairingCode: preferences.pairingCode,
+        host: value.host,
+        port: value.port,
+        pairingCode: value.pairingCode,
       );
     } on Object {
-      _scheduleReconnect();
+      if (intent == _connectionIntent) {
+        _scheduleReconnect();
+      }
     }
   }
 
@@ -152,11 +163,18 @@ class PlayerController extends ChangeNotifier {
       case MessageType.stateSync:
         _applyStatePayload(message.payload);
       case MessageType.error:
-        final detail = message.payload['message'];
-        _errorMessage = detail is String
-            ? detail
-            : 'The host rejected the request.';
         final code = message.payload['code'];
+        _errorMessage = switch (code) {
+          'pairing_failed' =>
+            'The pairing code is incorrect. Check the host and try again.',
+          'client_limit' =>
+            'Another buzzer is connected. Disconnect it before pairing.',
+          'invalid_buzz' =>
+            'That buzz was not accepted. Wait for the next round.',
+          'settings_save_failed' =>
+            'The host could not save those settings. Try again.',
+          _ => 'The host rejected the request. Try again.',
+        };
         if (code == 'pairing_failed' || code == 'client_limit') {
           _manualDisconnect = true;
           _status = PlayerConnectionStatus.disconnected;
@@ -213,8 +231,9 @@ class PlayerController extends ChangeNotifier {
     if (preferences.hapticsEnabled) {
       try {
         await HapticFeedback.heavyImpact();
-      } on Object catch (error) {
-        _errorMessage = 'Could not trigger haptic feedback: $error';
+      } on Object {
+        _errorMessage =
+            'Could not trigger haptic feedback. Check the phone settings.';
         _notify();
       }
     }
@@ -241,8 +260,7 @@ class PlayerController extends ChangeNotifier {
         type: MessageType.settingsUpdate,
         payload: <String, Object?>{
           'match': match.toJson(),
-          if (mobileSoundEnabled != null)
-            'mobileSoundEnabled': mobileSoundEnabled,
+          'mobileSoundEnabled': ?mobileSoundEnabled,
         },
       ),
     );
@@ -253,8 +271,9 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> setHapticsEnabled(bool enabled) async {
-    _preferences = preferences.copyWith(hapticsEnabled: enabled);
-    await _storage.savePlayerPreferences(preferences);
+    final nextPreferences = preferences.copyWith(hapticsEnabled: enabled);
+    await _storage.savePlayerPreferences(nextPreferences);
+    _preferences = nextPreferences;
     _notify();
   }
 
@@ -273,6 +292,7 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    _connectionIntent++;
     _manualDisconnect = true;
     _retryAttempt = 0;
     _reconnectTimer?.cancel();
@@ -309,8 +329,9 @@ class PlayerController extends ChangeNotifier {
   Future<void> _playWinnerSound(Team team) async {
     try {
       await _audio.play(team);
-    } on Object catch (error) {
-      _errorMessage = 'Could not play the buzzer sound: $error';
+    } on Object {
+      _errorMessage =
+          'Could not play the buzzer sound. Check the phone volume.';
       _notify();
     }
   }
@@ -323,6 +344,7 @@ class PlayerController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _connectionIntent++;
     _disposed = true;
     _reconnectTimer?.cancel();
     unawaited(_networkSubscription?.cancel());

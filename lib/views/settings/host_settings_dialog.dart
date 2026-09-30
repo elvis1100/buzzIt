@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
 
 import '../../controllers/host_controller.dart';
 import '../../core/constants.dart';
@@ -7,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/sound_selection.dart';
 import '../../models/team.dart';
 import '../../widgets/team_editor_card.dart';
+import 'widgets/host_settings_widgets.dart';
 
 class HostSettingsDialog extends StatefulWidget {
   const HostSettingsDialog({required this.controller, super.key});
@@ -102,7 +102,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    const _SectionTitle(
+                    const SettingsSectionTitle(
                       title: 'Teams',
                       subtitle: 'Choose readable names and distinct colors.',
                     ),
@@ -125,7 +125,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       },
                     ),
                     const SizedBox(height: AppSizes.spaceXl),
-                    const _SectionTitle(
+                    const SettingsSectionTitle(
                       title: 'Round reset',
                       subtitle:
                           'The host controls reset timing for both screens.',
@@ -159,7 +159,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                           : null,
                     ),
                     const SizedBox(height: AppSizes.spaceXl),
-                    const _SectionTitle(
+                    const SettingsSectionTitle(
                       title: 'Buzzer sounds',
                       subtitle: 'WAV, MP3, OGG, or M4A up to 10 MB.',
                     ),
@@ -176,7 +176,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       },
                     ),
                     const SizedBox(height: AppSizes.spaceMd),
-                    _SoundRow(
+                    SoundSelectionRow(
                       teamLabel: _teamAController.text.trim().isEmpty
                           ? 'Team A'
                           : _teamAController.text.trim(),
@@ -187,7 +187,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       onTest: () => _testSound(Team.a),
                     ),
                     const SizedBox(height: AppSizes.spaceSm),
-                    _SoundRow(
+                    SoundSelectionRow(
                       teamLabel: _teamBController.text.trim().isEmpty
                           ? 'Team B'
                           : _teamBController.text.trim(),
@@ -198,7 +198,7 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
                       onTest: () => _testSound(Team.b),
                     ),
                     const SizedBox(height: AppSizes.spaceXl),
-                    const _SectionTitle(
+                    const SettingsSectionTitle(
                       title: 'Network',
                       subtitle:
                           'Changing the port disconnects the current buzzer.',
@@ -274,11 +274,16 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
         }
         _validationMessage = null;
       });
-    } on Object catch (error) {
+    } on FormatException catch (error) {
       if (mounted) {
-        setState(() {
-          _validationMessage = 'Could not use that sound: $error';
-        });
+        setState(() => _validationMessage = error.message);
+      }
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _validationMessage =
+              'Could not use that sound. Choose another file.',
+        );
       }
     }
   }
@@ -294,11 +299,12 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
       if (mounted) {
         setState(() => _validationMessage = null);
       }
-    } on Object catch (error) {
+    } on Object {
       if (mounted) {
-        setState(() {
-          _validationMessage = 'Could not play that sound: $error';
-        });
+        setState(
+          () => _validationMessage =
+              'Could not play that sound. Choose another file.',
+        );
       }
     }
   }
@@ -336,95 +342,21 @@ class _HostSettingsDialogState extends State<HostSettingsDialog> {
       if (mounted) {
         Navigator.pop(context);
       }
-    } on Object catch (error) {
+    } on HostSettingsSaveException catch (error) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _validationMessage = 'Could not save settings: $error';
+          _validationMessage = error.message;
+        });
+      }
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _validationMessage =
+              'Could not save settings. Check the sound files and try again.';
         });
       }
     }
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: AppSizes.spaceXs),
-        Text(subtitle, style: const TextStyle(color: AppColors.inkMuted)),
-      ],
-    );
-  }
-}
-
-class _SoundRow extends StatelessWidget {
-  const _SoundRow({
-    required this.teamLabel,
-    required this.filePath,
-    required this.onChoose,
-    required this.onTest,
-  });
-
-  final String teamLabel;
-  final String? filePath;
-  final VoidCallback onChoose;
-  final VoidCallback onTest;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.spaceMd),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.music_note_rounded, color: AppColors.primary),
-            const SizedBox(width: AppSizes.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    teamLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  Text(
-                    filePath == null
-                        ? 'Built-in chime'
-                        : path.basename(filePath!),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.inkMuted),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: 'Preview sound',
-              onPressed: onTest,
-              icon: const Icon(Icons.play_arrow_rounded),
-            ),
-            OutlinedButton(onPressed: onChoose, child: const Text('Choose')),
-          ],
-        ),
-      ),
-    );
   }
 }

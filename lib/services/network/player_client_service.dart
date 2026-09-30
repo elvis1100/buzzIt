@@ -78,11 +78,12 @@ class PlayerClientService {
                 message: ProtocolMessage.decode(raw),
               ),
             );
-          } on FormatException catch (error) {
+          } on FormatException {
             _emit(
-              PlayerNetworkEvent(
+              const PlayerNetworkEvent(
                 PlayerNetworkEventType.error,
-                detail: error.message,
+                detail:
+                    'The host sent an invalid message. Reconnect and try again.',
               ),
             );
           }
@@ -105,7 +106,8 @@ class PlayerClientService {
             return;
           }
           _socket = null;
-          final detail = 'Connection error: $error';
+          const detail =
+              'The host connection failed. Check the network and try again.';
           _emit(
             PlayerNetworkEvent(PlayerNetworkEventType.error, detail: detail),
           );
@@ -119,7 +121,7 @@ class PlayerClientService {
         },
         cancelOnError: true,
       );
-    } on Object catch (error) {
+    } on Object {
       if (!_isCurrent(generation)) {
         return;
       }
@@ -129,8 +131,7 @@ class PlayerClientService {
           PlayerNetworkEventType.error,
           detail:
               'Could not reach $host:$port. Check that both devices are on '
-              'the same Wi-Fi and that the host firewall allows this port. '
-              '($error)',
+              'the same Wi-Fi and that the host firewall allows this port.',
         ),
       );
       rethrow;

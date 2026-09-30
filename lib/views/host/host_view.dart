@@ -33,10 +33,9 @@ class HostView extends StatelessWidget {
                       HostHeader(
                         controller: controller,
                         onSettings: () => _showSettings(context, controller),
-                        onToggleSound: () =>
-                            controller.setMobileSoundEnabled(
-                              !controller.settings.mobileSoundEnabled,
-                            ),
+                        onToggleSound: () => controller.setMobileSoundEnabled(
+                          !controller.settings.mobileSoundEnabled,
+                        ),
                       ),
                       if (controller.errorMessage != null) ...<Widget>[
                         const SizedBox(height: AppSizes.spaceMd),

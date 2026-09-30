@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:buzz_it/controllers/player_controller.dart';
 import 'package:buzz_it/views/player/widgets/player_connection_view.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('shows the mobile host connection controls', (tester) async {

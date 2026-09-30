@@ -12,8 +12,8 @@ class AudioService {
   static const _supportedExtensions = <String>['wav', 'mp3', 'ogg', 'm4a'];
   static const _maximumSoundBytes = 10 * 1024 * 1024;
 
-  final AudioPlayer _teamAPlayer = AudioPlayer();
-  final AudioPlayer _teamBPlayer = AudioPlayer();
+  AudioPlayer? _teamAPlayer;
+  AudioPlayer? _teamBPlayer;
 
   Future<void> play(Team team, {String? customPath}) async {
     final requested = customPath == null ? null : File(customPath);
@@ -26,7 +26,7 @@ class AudioService {
 
     final player = _playerFor(team);
     await player.setReleaseMode(ReleaseMode.stop);
-    final assetPath = team == Team.a ? 'sound/ding.mp3' : 'sound/buzz.wav';
+    final assetPath = team == Team.a ? 'sound/ding.wav' : 'sound/buzz.wav';
     await player.play(AssetSource(assetPath));
   }
 
@@ -68,28 +68,33 @@ class AudioService {
     await _playFile(team, preview);
   }
 
+  /// Copies a selected sound to a new managed file without replacing the
+  /// current one. The caller must discard it after a failed settings save or
+  /// prune older copies after a successful save.
   Future<String> persistSound(Team team, SoundSelection selection) async {
     final supportDirectory = await getApplicationSupportDirectory();
     final soundsDirectory = Directory(
       path.join(supportDirectory.path, 'sounds'),
     );
     await soundsDirectory.create(recursive: true);
+    // A new path keeps the currently selected file intact until host settings
+    // are saved. Failed saves can discard this file without changing playback.
+    final baseName = team == Team.a ? 'custom_team_a' : 'custom_team_b';
     final destination = File(
       path.join(
         soundsDirectory.path,
-        team == Team.a
-            ? 'custom_team_a${selection.extension}'
-            : 'custom_team_b${selection.extension}',
+        '${baseName}_${DateTime.now().microsecondsSinceEpoch}${selection.extension}',
       ),
     );
-    await _playerFor(team).stop();
+    await _teamPlayerIfCreated(team)?.stop();
     await destination.writeAsBytes(selection.bytes, flush: true);
-    await _deleteSupersededSounds(team, destination.path, soundsDirectory);
     return destination.path;
   }
 
   AudioPlayer _playerFor(Team team) {
-    return team == Team.a ? _teamAPlayer : _teamBPlayer;
+    return team == Team.a
+        ? (_teamAPlayer ??= AudioPlayer())
+        : (_teamBPlayer ??= AudioPlayer());
   }
 
   Future<void> _playFile(Team team, File file) async {
@@ -98,26 +103,51 @@ class AudioService {
     await player.play(DeviceFileSource(file.path));
   }
 
-  Future<void> _deleteSupersededSounds(
-    Team team,
-    String destinationPath,
-    Directory soundsDirectory,
-  ) async {
+  AudioPlayer? _teamPlayerIfCreated(Team team) {
+    return team == Team.a ? _teamAPlayer : _teamBPlayer;
+  }
+
+  /// Removes a newly persisted managed file when the host settings save fails.
+  Future<void> discardSound(String filePath) async {
+    final supportDirectory = await getApplicationSupportDirectory();
+    final soundsDirectory = path.join(supportDirectory.path, 'sounds');
+    if (!path.isWithin(soundsDirectory, filePath)) {
+      return;
+    }
+    final file = File(filePath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
+  /// Removes older managed copies after the new settings have been saved.
+  Future<void> pruneSounds(Team team, String keepPath) async {
+    final supportDirectory = await getApplicationSupportDirectory();
+    final soundsDirectory = Directory(
+      path.join(supportDirectory.path, 'sounds'),
+    );
+    if (!await soundsDirectory.exists()) {
+      return;
+    }
     final baseName = team == Team.a ? 'custom_team_a' : 'custom_team_b';
-    for (final extension in _supportedExtensions) {
-      final candidate = File(
-        path.join(soundsDirectory.path, '$baseName.$extension'),
-      );
-      if (candidate.path != destinationPath && await candidate.exists()) {
-        await candidate.delete();
+    await for (final entity in soundsDirectory.list()) {
+      if (entity is! File || entity.path == keepPath) {
+        continue;
+      }
+      final name = path.basename(entity.path);
+      if ((name.startsWith('${baseName}_') || name.startsWith('$baseName.')) &&
+          _supportedExtensions.contains(
+            path.extension(name).replaceFirst('.', ''),
+          )) {
+        await entity.delete();
       }
     }
   }
 
   Future<void> dispose() async {
     await Future.wait(<Future<void>>[
-      _teamAPlayer.dispose(),
-      _teamBPlayer.dispose(),
+      if (_teamAPlayer case final player?) player.dispose(),
+      if (_teamBPlayer case final player?) player.dispose(),
     ]);
   }
 }

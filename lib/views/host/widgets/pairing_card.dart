@@ -105,7 +105,7 @@ class PairingCard extends StatelessWidget {
                             ),
                             SizedBox(height: AppSizes.spaceSm),
                             Text(
-                              'QR pairing is unavailable until a private LAN address is detected.',
+                              'QR pairing is unavailable while the host is not listening or no private LAN address is detected.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
